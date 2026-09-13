@@ -15,6 +15,7 @@
 | 分點追蹤 | 選定分點看每日淨額時間序列與累計曲線 | 實際資料 |
 | 市值戰報 | 生技全市場排名與大盤 Top 30、市值走勢、區間統計、量能 | 實際資料 |
 | 同業比較 | 台灣再生醫療 12 檔相對表現、排名、規模對比、逐檔對帳 | 實際資料 |
+| 合作夥伴 | 海外授權夥伴 REPROCELL（4978.T）與 풍전약품（298060.KQ）的股價（可切還原後／當時實際）、市值（原幣、不回推歷史）、Pipeline、最新消息 | 價量與市值為實際資料（Yahoo 抓不到時沿用上一版並標示）；Pipeline、消息為人工策展 |
 
 ## 券商分點：資料源與坑
 
@@ -26,7 +27,7 @@ https://www.tpex.org.tw/www/zh-tw/emerging/dailyDl?name=EMdss004.YYYYMMDD-C.csv
 
 五個會卡住的地方：
 
-1. **必須帶 `/www/` 前綴**。日統計頁面上列出的連結是 `/zh-tw/emerging/dailyDl?...`，直接打會 302 到 `/errors`。頁面本身有 Cloudflare 擋，但這支下載端點沒有。
+1. **必須帶 `/www/` 前綴**。日統計頁面上列出的連結是 `/zh-tw/emerging/dailyDl?...`，直接打會失敗（2026-07 實測是 302 到 `/errors`，2026-09 實測回 404）。頁面本身有 Cloudflare 擋，但這支下載端點沒有。
 2. 編碼是 **Big5**（用 `big5hkscs` 才不會掉罕用字），CRLF 換行，格式是自訂的 `TITLE`／`HEADER`／`BODY` 前綴而非標準 CSV 表頭。
 3. **只涵蓋「電腦議價點選系統交易」**，不含系統外議價（那是 `EMdcs002`）。現行報表也只用這一份，不要自作主張合併，否則對不上。
 4. 興櫃日報表只給**券商代號**。TWSE 兩支證券商基本資料 API 可蓋掉 99.2%，但「經紀部／自營」這類總公司層級的交易代號查不到，需併入公司自行彙整的對照表（見 `fetch_broker_lut.py` 的 `EXTRA`）。
@@ -45,7 +46,7 @@ https://www.tpex.org.tw/www/zh-tw/emerging/dailyDl?name=EMdss004.YYYYMMDD-C.csv
 
 做法：`fetch_broker_daily.py` 的 `ALIASES`／`alias_of()` 產出 `aliases`（舊碼→新碼）與 `alias_events`（含來源），寫進 `broker_daily.json`；**每日明細與 `cache/` 保留原始代號**，前端 `applyAliases()` 載入時才合併，`verify_broker.py` 的對帳不受影響。舊碼在 `brokers` 裡掛新碼的名稱並記 `old_name`（如 `592r` → 台新-城東，舊名 元富-城東），介面上滑過分點名稱可看到。
 
-不併的後果是同一家被拆成新舊兩列、長區間累計低估：8150「台新」+26.8 萬與 9B17「台新-台北營業部」+22.5 萬其實是同一家。以 5／10 日窗格看不到這件事，拉長區間就會遇到 —— 現行報表同樣有這個問題。
+不併的後果是同一家被拆成新舊兩列、長區間累計低估：8150「台新」（最後交易到 2026-04-02）與 9B17「台新-台北營業部」（2026-04-07 起）其實是同一家，全期累計會被拆成兩段各算各的。以 5／10 日窗格看不到這件事，拉長區間就會遇到 —— 現行報表同樣有這個問題。
 
 ### 籌碼分析的四個延伸（v0.6）
 
@@ -76,7 +77,7 @@ https://www.tpex.org.tw/www/zh-tw/emerging/dailyDl?name=EMdss004.YYYYMMDD-C.csv
 |---|---|
 | 興櫃 券商分點日明細 | TPEx `www/zh-tw/emerging/dailyDl?name=EMdss004.YYYYMMDD-C.csv` |
 | 券商總公司基本資料 | TWSE OpenAPI `v1/brokerService/brokerList`（64 家） |
-| 券商分公司基本資料 | TWSE OpenAPI `v1/opendata/OpenData_BRK02`（813 家） |
+| 券商分公司基本資料 | TWSE OpenAPI `v1/opendata/OpenData_BRK02`（八百多家，實數見 `data/broker_lut.json` 的 `sources`） |
 | 上市 個股歷史 | TWSE `rwd/zh/afterTrading/STOCK_DAY` |
 | 上市 全市場單日 | TWSE `rwd/zh/afterTrading/MI_INDEX?type=ALL` |
 | 上櫃 個股歷史 | TPEx `www/zh-tw/afterTrading/tradingStock` |
@@ -84,7 +85,7 @@ https://www.tpex.org.tw/www/zh-tw/emerging/dailyDl?name=EMdss004.YYYYMMDD-C.csv
 | 興櫃 個股歷史 | TPEx `www/zh-tw/emerging/historical` |
 | 興櫃 當日行情 | TPEx OpenAPI `tpex_esb_latest_statistics`（唯一有最後成交價） |
 | 興櫃 推薦證券商 | TPEx OpenAPI `tpex_esb_recommended_dealer` |
-| 生技全市場範圍 | 三個市場基本資料的產業別代碼 `22`（共 252 家） |
+| 生技全市場範圍 | 三個市場基本資料的產業別代碼 `22`（約 250 家，每日變動，實數見 `data/universe.json` 的 `total`） |
 | 已發行普通股數 | MOPS `t187ap03_L`（上市）／`mopsfin_t187ap03_O`（上櫃）／`_R`（興櫃） |
 | 海外夥伴 價量 | Yahoo Finance `v8/finance/chart/<SYM>?range=2y&interval=1d&events=split` |
 | 海外夥伴 股數 | 人工維護於 `data/partners_ref.json`（日本決算短信／韓國 DART，每筆附來源與基準日） |
@@ -171,19 +172,19 @@ python scripts/verify_site.py         # 全站形狀與日期檢查（發佈前�
 
 `--days N` 只決定**這次要下載哪幾天**；輸出一律涵蓋 `cache/` 裡的所有交易日，不會因為跑 `--days 7` 就把歷史砍成 7 天。
 
-`build_fixture.py` 產生的 `broker_fixture.json` 已不再供前端顯示，只留作對帳基準，除非黃金樣本要換一期，否則不需要重跑。
+`broker_fixture.json` 是 2026-07-21 黃金樣本：`verify_broker.py` 用它對帳，前端「籌碼分析」底部的對帳表也讀它（必要檔，缺了整頁只剩「資料載入失敗」，不要當成用不到的檔案刪掉或改名）。產生它的 `build_fixture.py` 除非要換黃金樣本，否則不需要重跑。
 
 跑完後 `git add data cache && git commit && git push`，GitHub Pages 約 1 分鐘後生效。
 
 ## 排程
 
-`.github/workflows/daily.yml`：每個交易日兩個時段（台北 **18:17** 與 **20:47**，刻意避開整點）自動跑完上面全部腳本、跑三道回歸測試（分點、夥伴、全站結構）、commit 並發佈。另有**隔天台北 06:00 的補跑班**：先看 HEAD 是不是機器人 16 小時內的 commit，是就整個不跑（不多打請求），不是才跑——保證上班前一定看得到前一個交易日的資料。任一道沒過就中止，不會把錯的數字推上去。也可以在 Actions 頁面手動觸發——**但避開台北 13:30–14:30**，TWSE 那段時間停用全市場查詢（自稱到 13:45，實測 GitHub runner 在 14:05 仍被擋，9/9、9/10 共撞三次）。另外盤後各端點出檔時間不一（個股行情已出、全市場檔還沒出），**盤中或剛收盤時手動觸發會拿到日期不一致的快照**，全站檢查會警告；讓排程晚上跑最乾淨。所有腳本的 `date.today()` 以台北時間為準（workflow 設了 `TZ=Asia/Taipei`）。
+`.github/workflows/daily.yml`：每個交易日兩個時段（台北 **18:17** 與 **20:47**，刻意避開整點）自動跑完上面全部腳本、跑三道回歸測試（分點、夥伴、全站結構）、commit 並發佈。另有**隔天台北 06:00 的補跑班**：先看 HEAD 是不是機器人 16 小時內的 commit，是就整個不跑（不多打請求），不是才跑。這班是多一次補救機會（實測 2026-09-11 晚上兩班都失敗，靠隔天 06:00 班 07:58 開跑、08:03 推上資料救回），但它同樣可能被延遲、也跑同一套守門員，來源真的有錯時一樣會擋下，不是保證。任一道沒過就中止，不會把錯的數字推上去。也可以在 Actions 頁面手動觸發——**但避開台北 13:30–14:30**，TWSE 那段時間停用全市場查詢（自稱到 13:45，實測 GitHub runner 在 14:05 仍被擋，9/9、9/10 共撞三次）。另外盤後各端點出檔時間不一（個股行情已出、全市場檔還沒出），**盤中或剛收盤時手動觸發會拿到日期不一致的快照**，全站檢查會警告；讓排程晚上跑最乾淨。所有腳本的 `date.today()` 以台北時間為準（workflow 設了 `TZ=Asia/Taipei`）。
 
 之所以能跑在 GitHub Actions，是因為**本站所有資料源都是公開 API、沒有任何憑證要保管**，排程不綁任何一台個人電腦。反過來說，需要帳密或內部資料的東西不要加進這個 workflow。
 
 ### ⚠️ 排程的時間不準，這是 GitHub 免費方案的特性
 
-設定 17:30 不代表 17:30 跑。實測 2026-07-27～09-09 的 33 次排程：**中位晚 2.1 小時、最近兩週固定晚 4.3 小時（21:45 才開跑）、最慘晚 11.5 小時（隔天凌晨 05:00）**。GitHub 文件自己寫明整點最壅塞、建議排在其他分鐘數，所以現在用 :17／:47，並排兩個時段互為備援。
+v0.5 之前排程設 17:30，實際並不在 17:30 跑。以下是那個舊設定下實測 2026-07-27～09-09 的 33 次排程：**中位晚 2.1 小時、最近兩週固定晚 4.3 小時（21:45 才開跑）、最慘晚 11.5 小時（隔天凌晨 05:00）**。GitHub 文件自己寫明整點最壅塞、建議排在其他分鐘數，所以現在用 :17／:47，並排兩個時段互為備援。
 
 頁首的「最後更新」會顯示實際跑的時間（台北），「資料日」是那份資料屬於哪個交易日——**盤中去看 Yahoo 的即時報價一定比本站新，那不是漏更新**，本站只做盤後。
 
@@ -194,7 +195,7 @@ python scripts/verify_site.py         # 全站形狀與日期檢查（發佈前�
 兩件維運上要知道的事：
 
 - **repo 連續 60 天沒有活動，GitHub 會自動停用排程**。機器人自己推的 commit 算不算活動並不明確，請每月看一眼網頁上的「最後更新」日期。
-- **repo 日後轉移給公司帳號時，Actions 會跟著走、不必改設定**，但 GitHub Pages 網址會從 `richlovegod.github.io/chip-iq` 變成 `<新帳號>.github.io/chip-iq`，已經發出去的連結會失效，要重新通知使用者。
+- **repo 日後轉移給公司帳號時，Actions 會跟著走、排程照常跑**，但 GitHub Pages 網址會從 `richlovegod.github.io/chip-iq` 變成 `<新帳號>.github.io/chip-iq`，已經發出去的連結會失效，要重新通知使用者。另外，排程失敗的通知信 GitHub 寄給最後修改 cron 的人（停用後重新啟用的話改寄給啟用的人），轉移後不會自動改寄給新帳號；要由接手的帳號改一次 cron 才會改寄（做法與要避開的那一行見 [`RUNBOOK.md`](RUNBOOK.md)「前置條件」），不改的話排程壞了沒有人收到信。
 
 ## 版本紀錄
 
@@ -222,7 +223,7 @@ data/universe.json          生技全市場排名、Top 30、7729 名次
 data/meta.json              最後更新日、造市商、股數、各資料源接入狀態
 data/broker_daily.json      券商分點每日明細（一列＝一天×一分點）
 data/broker_lut.json        券商代號 → 分點名稱對照表 ＋ 造市商代號
-data/broker_fixture.json    2026-07-21 黃金樣本，僅供對帳
+data/broker_fixture.json    2026-07-21 黃金樣本（對帳腳本與前端對帳表共用）
 data/partners.json          海外授權夥伴價量、市值、公司事件（fetch_partners.py 產出）
 data/partners_ref.json      夥伴股數與公司事件的人工維護正本（fetch_partners.py 的輸入）
 data/partners_profile.json  夥伴的授權關係、Pipeline、新聞等敘事（人工策展）
