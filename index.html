@@ -169,7 +169,7 @@
   <div class="wrap">
     <div class="brand">
       <div>
-        <div class="logo">7729 <b>仲恩生醫</b> <a class="v" href="versions.html" title="版本紀錄與維運說明">籌碼與市值監測 · v0.6.2 ↗</a></div>
+        <div class="logo">7729 <b>仲恩生醫</b> <a class="v" href="versions.html" title="版本紀錄與維運說明">籌碼與市值監測 · v0.6.3 ↗</a></div>
         <div class="tag"><span class="live"></span>興櫃 · 資料源 TPEx 公開資訊 · <span id="rangeTag">—</span></div>
       </div>
       <div class="meta">
@@ -217,7 +217,7 @@
   <div class="kpi" id="chipKpi"></div>
   <div class="grid2">
     <div class="card">
-      <h2>◎ 買超分點 <small>右三欄：這家分點在區間開始前已累積的部位、成本，以及本區間的動作</small></h2>
+      <h2>◎ 買超分點 <small>加碼＝原本就淨買超、再買；回補＝原本淨賣超、買回；新進＝區間前沒有部位</small></h2>
       <table>
         <thead><tr><th>分點</th><th class="num">買超(股)</th><th class="num">均價</th><th class="num">佔比</th>
         <th class="num" title="區間起始日之前、自資料起點累計的淨額">區間前部位</th>
@@ -226,7 +226,7 @@
       </table>
     </div>
     <div class="card">
-      <h2>◎ 賣超分點 <small>了結／認賠＝原本累計淨買超者在賣，續出＝原本就是淨賣超者</small></h2>
+      <h2>◎ 賣超分點 <small>了結／認賠＝原本淨買超者賣出（賣價高於／低於成本）；續出＝原本就淨賣超、繼續賣；新賣＝區間前沒有部位</small></h2>
       <table>
         <thead><tr><th>分點</th><th class="num">賣超(股)</th><th class="num">均價</th><th class="num">佔比</th>
         <th class="num" title="區間起始日之前、自資料起點累計的淨額">區間前部位</th>
@@ -412,7 +412,7 @@
 </section>
 
 <div class="foot">
-  <b>7729 籌碼與市值監測 v0.6.2</b>　<a href="versions.html" style="color:#8b9bb0">版本紀錄 ↗</a>　|　價量與市值：TWSE／TPEx／公開資訊觀測站　|　分點進出：TPEx 興櫃買賣日報表（EMdss004）＋ TWSE 證券商基本資料，皆程式化每日更新<br>
+  <b>7729 籌碼與市值監測 v0.6.3</b>　<a href="versions.html" style="color:#8b9bb0">版本紀錄 ↗</a>　|　價量與市值：TWSE／TPEx／公開資訊觀測站　|　分點進出：TPEx 興櫃買賣日報表（EMdss004）＋ TWSE 證券商基本資料，皆程式化每日更新<br>
   海外授權夥伴：價量取自 Yahoo Finance v8 chart（免憑證公開端點），發行股數與公司事件取自各國官方揭露（日本決算短信／韓國 DART、KIND），人工覆核後落地為資料，每筆附來源與基準日<br>
   興櫃採議價交易、由推薦證券商造市，<b>造市商成交均價顯示 0.00 屬正常結構性現象</b>，非資料缺漏。<br>
   本頁所有內容均來自公開資料，不含任何非公開資訊，亦不構成投資建議。<br>  股價與市值為程式自動抓取；授權關係、進度與消息為人工整理，各條均附來源連結與整理日期。
@@ -521,8 +521,12 @@ function side(rows,dir,topN){
   var out=top.map(function(r){return r;});
   if(rest.length){
     var b=0,s=0,amt=0;
-    rest.forEach(function(r){b+=r.buy;s+=r.sell;amt+=r.avg_price*(r.buy+r.sell);});
-    var qty=b+s;
+    /* 造市商自營的均價是 0，算進去會把「其他」的均價拉到遠低於成交價 */
+    var qty=0;
+    rest.forEach(function(r){
+      b+=r.buy;s+=r.sell;
+      if(r.avg_price>0){amt+=r.avg_price*(r.buy+r.sell);qty+=r.buy+r.sell;}
+    });
     out.push({name:'其他 '+rest.length+' 家分點',other:true,net:b-s,
               avg_price:qty?amt/qty:0,
               pct:rest.reduce(function(a,r){return a+r.pct;},0)});
@@ -1386,14 +1390,12 @@ function ptnWin(p){
 function renderPtnHead(){
   var m=PT.meta||{}, ls=m.last_success||{};
   var bad=PT.partners.filter(function(p){return p.data_status!=='live';});
-  var frame=(PP&&PP.framing)||'REPROCELL 與 풍전약품（原 SCM Lifescience）皆為 Stemchymal® 的授權夥伴。';
   document.getElementById('ptnFrame').innerHTML=
-    '<div style="flex:1 1 360px"><b>授權夥伴，非競爭對手。</b><br>'+esc(frame)+'</div>'
-    +'<div class="st">'
+    '<div class="st" style="text-align:left">'
       +(bad.length||m.stale?'<span class="mm">資料未更新</span>':'<span class="live"></span>')
       +'價量資料最後成功更新於 <b style="color:#e6edf3">'+esc(ls.data_date||m.data_date||'—')+'</b>'
-      +'<br><span style="color:#6a7c92">抓取時間 '+esc(ls.at||m.generated_at||'—')+'</span>'
-      +'<br>'+PT.partners.map(function(p){
+      +'<span style="color:#6a7c92">（抓取時間 '+esc(ls.at||m.generated_at||'—')+'）</span>　'
+      +PT.partners.map(function(p){
           return esc(p.ticker)+' '+statPill(p);
         }).join('　')
     +'</div>';
@@ -1994,15 +1996,13 @@ Promise.all([
   document.getElementById('rangeTag').textContent='歷史 '+s[0].date+' ～ '+s[s.length-1].date+'（'+s.length+' 個交易日）';
 
   document.getElementById('chipNote').innerHTML=
-    '<b>資料源：'+esc(BD.source)+'</b>，'+BD.date_from+' ～ '+BD.date_to
-    +' 共 '+BD.trading_days+' 個交易日的每日明細（一列＝一天×一分點）。<br>'
-    +'因為存的是明細而非加總後的窗格，<b>任何區間都能即時算出來</b>——'
-    +'現行 email 報表固定在 5／10 日，是資料形態造成的限制，不是選擇。'
-    +'券商代號對照併用 TWSE 證券商總公司／分公司基本資料與公司自行彙整的對照表；'
-    +'期間內的兩次券商改碼（元富 592x→9B2x、台新 815x→9B1x）已依官方公告併回同一分點。<br>'
-    +'<b>看法：</b>單日排名只說「今天誰在買」。每家分點旁多給「區間前部位／成本／動作」，'
-    +'下面再把換手拆成加碼或新錢、了結或續出，並列出近 20 日持續累積者與持股成本分層——'
-    +'這幾件事合起來，才分得出一根長紅是新資金進場，還是老籌碼在互相換手。';
+    '<b>這頁看的是：誰在買賣仲恩，買的是新資金還是原本的持股人在換手。</b><br>'
+    +'<b>怎麼看：</b>先在下方選區間，所有表格會跟著重算。分點表的「區間前部位」是這家分點在區間開始前累計的淨買賣，'
+    +'「動作」據此判斷這次是加碼、回補、新進，或了結、認賠、續出；'
+    +'再往下看扣掉造市商後的買賣來源、近 20 日一直在買或賣的分點，以及有多少籌碼已經獲利。<br>'
+    +'<b>解讀時留意：</b>分點是券商營業據點，不等於單一投資人；部位與成本只從 '+BD.date_from+' 起算，更早的持股不在內。<br>'
+    +'<b>資料來源：</b>櫃買中心興櫃分點買賣日報（電腦議價點選交易），'+BD.date_from+' ～ '+BD.date_to
+    +'，共 '+BD.trading_days+' 個交易日，每個交易日盤後更新。期間內元富、台新改過券商代號，已併回同一分點。';
 
   var wins=[[1,'當日'],[5,'近 5 日'],[10,'近 10 日'],[20,'近 20 日'],[60,'近 60 日'],
             [120,'近 120 日'],[BD.trading_days,'全部']];
