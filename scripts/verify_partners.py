@@ -346,7 +346,16 @@ def check_partner(p, R):
                 out.append(agg(vals))
             return min(out), max(out)
 
-        crossed = []
+        # Yahoo 的 meta 有時比它同一份回應裡的 chart 序列快一個交易日。新的那天
+        # 剛創新高／新低時，meta 已經反映、我們的序列還沒收到，值就會往「更極端」
+        # 的方向掉出帶外——2026-09-09、09-11、09-14、09-17 四次停發都是這樣，事後
+        # 都證實 Yahoo 是對的（例：9/17 的 2240.0 就是當天最低）。用 meta 自己的
+        # session 日期當證據放行這一種，且只放行更極端的方向；往「更不極端」跑出
+        # 帶外仍照擋（那是視窗舊端的差異，帶本來就涵蓋）。沒有這個日期時行為不變。
+        meta_as_of = perf.get("yahoo_meta_as_of")
+        meta_ahead = bool(meta_as_of and meta_as_of > series[-1]["d"])
+
+        crossed, ahead = [], []
         for key, ykey, field, agg, label in (
                 ("high_52w", "high_52w_yahoo", "h", max, "52 週高"),
                 ("low_52w", "low_52w_yahoo", "l", min, "52 週低")):
@@ -363,15 +372,23 @@ def check_partner(p, R):
             # 那是「這次沒給」而不是「跟我們算的不一樣」，跳過不當成失敗。
             if not (y or 0) > 0:
                 continue
-            crossed.append(label)
-            if not (lo_b - 0.01 <= y <= hi_b + 0.01):
+            if lo_b - 0.01 <= y <= hi_b + 0.01:
+                crossed.append(label)
+                continue
+            more_extreme = y > hi_b if agg is max else y < lo_b
+            if meta_ahead and more_extreme:
+                ahead.append(f"{label} Yahoo meta {y} 更極端但 meta 已含 "
+                             f"{meta_as_of}、本站序列到 {series[-1]['d']}，放行")
+            else:
                 R.fail("C11", f"{sym} Yahoo meta {label} {y} 不在序列重算得出的範圍 "
                               f"{lo_b}～{hi_b} 內")
         if not [f for f in R.fails if f.startswith("[C11]")]:
+            parts = []
             if crossed:
-                cross = "／".join(crossed) + " 與 Yahoo meta 一致"
-            else:
-                cross = "Yahoo meta 未提供 52 週高低，本次未交叉核對"
+                parts.append("／".join(crossed) + " 與 Yahoo meta 一致")
+            parts.extend(ahead)
+            cross = ("、".join(parts) if parts
+                     else "Yahoo meta 未提供 52 週高低，本次未交叉核對")
             R.ok("C11", f"{sym} 期間報酬 {perf['return_pct']:+.2f}%"
                         f"（{perf['first']['d']} {perf['first']['c']:,.2f}"
                         f" → {perf['last']['d']} {perf['last']['c']:,.2f}）"
@@ -541,6 +558,25 @@ def mut_perf_mismatch(doc):
     return doc
 
 
+def mut_yahoo_less_extreme_while_ahead(doc):
+    """meta 確實比序列新，但 Yahoo 的 52 週低往『更不極端』的方向跑出帶外。
+
+    放行條款只認「更極端」那一邊；這一種是真的對不起來，必須照擋。
+    """
+    perf = _p(doc)["performance"]
+    perf["yahoo_meta_as_of"] = "2099-01-01"
+    perf["low_52w_yahoo"] = (perf["low_52w"] or 0) * 2 + 1000
+    return doc
+
+
+def mut_yahoo_extreme_without_ahead(doc):
+    """meta 跟序列同一天，Yahoo 的 52 週低卻低得離譜 —— 沒有時間差可解釋，照擋。"""
+    p = _p(doc)
+    p["performance"]["yahoo_meta_as_of"] = p["series"][-1]["d"]
+    p["performance"]["low_52w_yahoo"] = 1.0
+    return doc
+
+
 MUTATIONS = [
     ("還原因子改成 1（rc = c）", mut_factor_one, "C5"),
     ("重複套用 5 倍還原（→ 錯誤的 −95.7%）", mut_double_adjust, "C6"),
@@ -556,6 +592,10 @@ MUTATIONS = [
     ("加一則沒有來源的『事實』", mut_unsourced_fact, "C12"),
     ("移除停牌宣告（缺口變成無法解釋）", mut_undeclared_gap, "C4"),
     ("期間報酬改成 −95.7%", mut_perf_mismatch, "C11"),
+    ("meta 較新、但 Yahoo 52 週低往更不極端的方向出帶",
+     mut_yahoo_less_extreme_while_ahead, "C11"),
+    ("meta 與序列同日、Yahoo 52 週低卻低得離譜",
+     mut_yahoo_extreme_without_ahead, "C11"),
 ]
 
 

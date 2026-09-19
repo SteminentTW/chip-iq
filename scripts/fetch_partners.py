@@ -207,6 +207,11 @@ def build_partner(ref, result):
             "low_52w": lo,
             "high_52w_yahoo": meta.get("fiftyTwoWeekHigh"),
             "low_52w_yahoo": meta.get("fiftyTwoWeekLow"),
+            # meta 可能比同一份回應裡的 chart 序列快一個交易日（收盤後、當天那根
+            # K 棒還沒進序列時）。存下 meta 自己的 session 日期，verify 的 C11 才
+            # 分得出「Yahoo 比我們新」與「Yahoo 跟我們不一致」。
+            "yahoo_meta_as_of": (iso(int(meta["regularMarketTime"]), gmt)
+                                 if meta.get("regularMarketTime") else None),
         },
         "market_cap": {
             "value": round(cap, 2),
