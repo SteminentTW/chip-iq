@@ -2,7 +2,7 @@
 
 仲恩生醫（7729，興櫃）的籌碼與市值互動面板。純靜態網頁（單一 `index.html` + `data/*.json`），無後端、無資料庫、無登入。
 
-**線上版**：https://richlovegod.github.io/chip-iq/
+**線上版**：https://steminenttw.github.io/chip-iq/
 
 > 本頁僅呈現 TWSE／TPEx／公開資訊觀測站的公開市場資料，不含任何非公開資訊，亦不構成投資建議。
 
@@ -195,7 +195,7 @@ v0.5 之前排程設 17:30，實際並不在 17:30 跑。以下是那個舊設�
 兩件維運上要知道的事：
 
 - **repo 連續 60 天沒有活動，GitHub 會自動停用排程**。機器人自己推的 commit 算不算活動並不明確，請每月看一眼網頁上的「最後更新」日期。
-- **repo 日後轉移給公司帳號時，Actions 會跟著走、排程照常跑**，但 GitHub Pages 網址會從 `richlovegod.github.io/chip-iq` 變成 `<新帳號>.github.io/chip-iq`，已經發出去的連結會失效，要重新通知使用者。另外，排程失敗的通知信 GitHub 寄給最後修改 cron 的人（停用後重新啟用的話改寄給啟用的人），轉移後不會自動改寄給新帳號；要由接手的帳號改一次 cron 才會改寄（做法與要避開的那一行見 [`RUNBOOK.md`](RUNBOOK.md)「前置條件」），不改的話排程壞了沒有人收到信。
+- **repo 已於 2026-09-20 轉移到公司帳號 `SteminentTW`**，Actions、排程與 Pages 設定都跟著走，排程照常跑。網址改為 `steminenttw.github.io/chip-iq`；舊的 `richlovegod.github.io/chip-iq` 已失效（GitHub Pages 網址不轉址，只有 github.com 上的 repo 網址會自動轉到新位置），已經發出去的連結要重新通知使用者。另外，排程失敗的通知信 GitHub 寄給最後修改 cron 的人（停用後重新啟用的話改寄給啟用的人），轉移後不會自動改寄給新帳號；要由接手的帳號改一次 cron 才會改寄（做法與要避開的那一行見 [`RUNBOOK.md`](RUNBOOK.md)「前置條件」），不改的話排程壞了沒有人收到信。
 
 ## 版本紀錄
 

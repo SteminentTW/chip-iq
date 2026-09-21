@@ -6,9 +6,9 @@
 
 ## 前置條件
 
-- 需要 `richlovegod/chip-iq` 的 **Write 權限**，才能觸發／啟用 workflow（`gh workflow run`、`gh workflow enable`）與 push。目前只有站主一人有；接手前要由站主把接手的人加成 collaborator，或由站主發起把 repo 轉移到公司帳號、公司帳號接受（轉移後 Pages 網址會變，見 README）。沒有 Write 權限時只做得了唯讀檢查（clone、看 run log、跑守門員），第三節的重新觸發與第四節的 push 都會被拒。
+- 需要 `SteminentTW/chip-iq` 的 **Write 權限**，才能觸發／啟用 workflow（`gh workflow run`、`gh workflow enable`）與 push。repo 已於 2026-09-20 轉移到公司帳號 `SteminentTW`，站主以 collaborator 身分保留 Write 權限；其他人接手前要由 `SteminentTW` 加成 collaborator。沒有 Write 權限時只做得了唯讀檢查（clone、看 run log、跑守門員），第三節的重新觸發與第四節的 push 都會被拒。
 - `gh auth login` 的帳號要有 `repo` scope；改到 `.github/workflows/` 底下的檔案時，push 另需 `workflow` scope。
-- 本機先 `git clone https://github.com/richlovegod/chip-iq`，以下指令都在 repo 根目錄執行。
+- 本機先 `git clone https://github.com/SteminentTW/chip-iq`，以下指令都在 repo 根目錄執行。
 - 排程失敗的通知信，GitHub 寄給「最後修改 workflow 檔裡 cron 的人」（workflow 被停用後又重新啟用的話，改寄給按下啟用的人），目前是站主。接手後要由接手者的帳號改一次 cron 並 push，通知才會改寄給接手者，不改的話排程失敗時接手的人收不到信。改晚上班其中一個的分鐘數即可（例如 `17 10` 改成 `18 10`）；**不要動 `0 22 * * 1-5` 那一行**，check job 是用這個字串認出早上補跑班的，改了它早上班會每天都照跑、不再略過。
 
 ## 一、什麼叫「正常」
@@ -31,7 +31,7 @@
 2. **時間一律用台北時間**。Windows 的 Git Bash 沒有時區資料，`TZ=Asia/Taipei date` 會默默回傳 UTC；用 Python：`datetime.now(timezone(timedelta(hours=8)))`。
 3. **排程紀錄**：`gh run list --workflow=daily.yml --limit 12 --json databaseId,event,status,conclusion,createdAt`，createdAt 換成台北時間。班次對應：前一交易日 18:17 之後的第一個 schedule run ＝ 18:17 班、第二個 ＝ 20:47 班。06:00 班要看 check job 的**實際輸出行**：`gh run view <id> --log | grep -v '36;1m' | grep -E '^check\s.*(不是早上補跑班|略過|補跑|不是機器人)'`。`--log` 會把腳本原文（帶 `36;1m` 色碼）整段印出來，不排除的話每一班的 log 都查得到這幾個字；開頭的 `^check` 也不能省，update job 裡的腳本同樣可能印出「略過」（例如 `fetch_peers.py` 的「查無基本資料，略過」），混進來會把晚班誤判成 06:00 班。實際輸出「不是早上補跑班，直接跑」＝ 晚上兩班或手動觸發（手動的 event 是 `workflow_dispatch`）；其餘三種（…略過／…補跑／HEAD 是「X」的 commit…跑）＝ 06:00 班。不要用 createdAt 判斷班次：晚班可能被延遲到隔天 06:00 之後才建立。
 4. **有 queued／in_progress 的 run** → `gh run watch <id> --exit-status` 等它跑完再判斷（一次約 7～10 分鐘），不要另外觸發。
-5. **線上資料**：`curl -H "Cache-Control: no-cache"` 抓 `https://richlovegod.github.io/chip-iq/data/{meta,quote_daily,broker_daily,universe,peers,partners}.json`，比對第一節。
+5. **線上資料**：`curl -H "Cache-Control: no-cache"` 抓 `https://steminenttw.github.io/chip-iq/data/{meta,quote_daily,broker_daily,universe,peers,partners}.json`，比對第一節。
 6. **本機跑守門員**（pull 之後本機資料就是線上資料）：
    ```bash
    python scripts/verify_broker.py
