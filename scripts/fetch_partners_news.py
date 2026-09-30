@@ -35,7 +35,7 @@
 
 用法：python fetch_partners_news.py [--dry-run]
 """
-import hashlib, json, os, re, sys, time
+import hashlib, json, os, re, sys, time, unicodedata
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -55,13 +55,19 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 TRANSLATE = ("https://translate.googleapis.com/translate_a/single"
              "?client=gtx&sl=auto&tl=zh-TW&dt=t&q=")
 MAX_TRANSLATE_PER_RUN = 60
+TRANSLATION_VERSION = 2  # 1：初版；2：GLOSSARY 加入 Stemchymal 片假名／韓文
 # 公司名先換成英文再送翻譯：機器翻譯會把「풍전약품」逐字譯成「豐田製藥」這類錯名。
 GLOSSARY = {"풍전약품": "Poongjeon", "SCM생명과학": "SCM Lifescience",
-            "에스씨엠생명과학": "SCM Lifescience", "リプロセル": "REPROCELL"}
+            "에스씨엠생명과학": "SCM Lifescience", "リプロセル": "REPROCELL",
+            # 產品名：日文片假名會被音譯成「Stem Kaimal」
+            "ステムカイマル": "Stemchymal", "스템카이말": "Stemchymal"}
 
 # 保留多久、每家最多幾則。畫面上只是「最近發生什麼事」，舊的留在人工策展區。
 KEEP_DAYS = 120
-MAX_PER_COMPANY = 30
+# 官方與媒體分開計額度：2026-09-30 首次上線時，Google News 單日就有 25 則 REPROCELL
+# 報導（多是同一件事的轉載），共用 30 則額度會把官方 IR 擠到只剩 5 則。
+MAX_OFFICIAL_PER_COMPANY = 30
+MAX_MEDIA_PER_COMPANY = 10
 
 
 def gnews(q, hl, gl):
@@ -93,6 +99,11 @@ def load_json(path):
 def clean(s):
     s = unescape(re.sub(r"<[^>]+>", "", s or ""))
     return re.sub(r"\s+", " ", s).strip()
+
+
+def norm_title(t):
+    t = unicodedata.normalize("NFKC", t or "")
+    return re.sub(r"[\W_]+", "", t).lower()
 
 
 def safe_url(u):
@@ -203,6 +214,7 @@ def add_translations(items, prev_zh):
     for i in items:
         if prev_zh.get(i["id"]):
             i["title_zh"] = prev_zh[i["id"]]
+            i["title_zh_v"] = TRANSLATION_VERSION
             continue
         if err or done >= MAX_TRANSLATE_PER_RUN:
             failed += 1
@@ -212,6 +224,7 @@ def add_translations(items, prev_zh):
             try:
                 time.sleep(0.5 if attempt == 0 else 3)
                 i["title_zh"] = translate(i["title"])
+                i["title_zh_v"] = TRANSLATION_VERSION
                 done += 1
                 break
             except Exception as e:
@@ -267,13 +280,24 @@ def main():
     cut = (today - timedelta(days=KEEP_DAYS)).isoformat()
     items = sorted((i for i in merged.values() if i["date"] >= cut),
                    key=lambda x: x["published_at"], reverse=True)
+    # 媒體轉貼官方公告時標題常一字不差（只差空白或全形），這種媒體條目直接丟掉，留官方那筆
+    official_titles = {norm_title(i["title"]) for i in items if i["kind"] == "official"}
+    items = [i for i in items
+             if i["kind"] == "official" or norm_title(i["title"]) not in official_titles]
     per, kept = {}, []
     for i in items:
-        per[i["companyId"]] = per.get(i["companyId"], 0) + 1
-        if per[i["companyId"]] <= MAX_PER_COMPANY:
+        key = (i["companyId"], i["kind"])
+        per[key] = per.get(key, 0) + 1
+        cap = MAX_OFFICIAL_PER_COMPANY if i["kind"] == "official" else MAX_MEDIA_PER_COMPANY
+        if per[key] <= cap:
             kept.append(i)
+    per = {}
+    for i in kept:
+        per[i["companyId"]] = per.get(i["companyId"], 0) + 1
 
-    prev_zh = {i["id"]: i.get("title_zh") for i in prev_items if i.get("title_zh")}
+    # GLOSSARY 改了就把 TRANSLATION_VERSION 加一，舊譯文會在下次排程重翻
+    prev_zh = {i["id"]: i.get("title_zh") for i in prev_items
+               if i.get("title_zh") and i.get("title_zh_v") == TRANSLATION_VERSION}
     tr = add_translations(kept, prev_zh)
     print(f"  翻譯：本次新翻 {tr['translated_this_run']} 則、未翻 {tr['untranslated']} 則"
           + (f"（{tr['error']}）" if tr["error"] else ""))
@@ -291,7 +315,8 @@ def main():
             "sources": status,
             "translation": tr,
             "keep_days": KEEP_DAYS,
-            "max_per_company": MAX_PER_COMPANY,
+            "max_per_company": {"official": MAX_OFFICIAL_PER_COMPANY,
+                                "media": MAX_MEDIA_PER_COMPANY},
             "note": ("自動彙整各來源 RSS 的標題與連結，未經人工覆核、不代表與仲恩相關。"
                      "經判讀的重要事件請看人工策展的「夥伴動態」。"),
         },
