@@ -2,16 +2,16 @@
  "stock_id": "7729",
  "stock_name": "仲恩生醫",
  "market": "興櫃",
- "updated_at": "2026-09-29",
- "generated_at": "2026-09-29T21:01:54+08:00",
+ "updated_at": "2026-09-30",
+ "generated_at": "2026-09-30T14:23:49+08:00",
  "today": {
-  "date": "2026-09-29",
-  "latest_price": 195.5,
-  "avg_price": 196.54,
-  "prev_avg_price": 191.89,
-  "high": 205.0,
-  "low": 192.5,
-  "volume": 1192305
+  "date": "2026-09-30",
+  "latest_price": 194.5,
+  "avg_price": 191.7,
+  "prev_avg_price": 196.54,
+  "high": 197.5,
+  "low": 185.5,
+  "volume": 1019577
  },
  "capital": {
   "capital_musd": 805.79,
