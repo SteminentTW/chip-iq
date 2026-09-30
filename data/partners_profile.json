@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "title": "海外合作夥伴 — 管線彙整與最新消息",
-  "curatedAt": "2026-08-16",
-  "curatedAtLabel": "最後人工整理：2026-08-16",
+  "curatedAt": "2026-09-30",
+  "curatedAtLabel": "最後人工整理：2026-09-30",
   "curationMode": "manual",
-  "curationNote": "本區為人工策展，非自動爬取。股價與市值由每日 pipeline 自動更新，本區內容需人工覆核後才會變動；顯示日期即為最後覆核日。",
+  "curationNote": "本區為人工策展，非自動爬取（自動蒐集的標題另見「最新消息（自動彙整）」卡）。股價與市值由每日 pipeline 自動更新，本區內容需人工覆核後才會變動；顯示日期即為最後覆核日。",
   "newsWindow": {
     "from": "2025-07-01",
-    "to": "2026-08-16",
+    "to": "2026-09-30",
     "label": "近 12 個月（2025-08 起）為主，另納入 2025-07 的併購案作為背景 —— 該案是後續商號變更與營收結構轉變的起點"
   },
   "framing": "REPROCELL 與 풍전약품（原 SCM Lifescience）皆為仲恩 Stemchymal® 的授權夥伴，非競爭對手。本頁為夥伴進度追蹤，不作競品評比。",
@@ -201,6 +201,32 @@
             {
               "label": "承認申請新聞稿",
               "url": "https://www.prnewswire.com/news-releases/reprocell-submits-application-for-manufacturing-and-marketing-approval-in-japan-for-stem-cell-therapy-stemchymal-for-spinocerebellar-ataxia-sca3-and-sca6-302806662.html"
+            }
+          ]
+        },
+        {
+          "date": "2026-09-17",
+          "dateDisplay": "2026/09/17",
+          "event": "與東邦 HD 簽訂國內流通基本合意書",
+          "detail": "取得承認後透過東邦 HD 集團醫藥品流通網路供應全國醫療機構；屬基本合意，正式契約時程未揭露（2026-09-29 公告）。",
+          "type": "fact",
+          "sources": [
+            {
+              "label": "公司新聞稿",
+              "url": "https://www.dreamnews.jp/press/0000363852"
+            }
+          ]
+        },
+        {
+          "date": "2026-09-18",
+          "dateDisplay": "2026/09/18",
+          "event": "取得 MAH「業許可」（神奈川縣）",
+          "detail": "再生医療等製品製造販売業許可，對應 6/18 的申請；取得承認後即由 REPROCELL 擔任製造販売元（2026-09-24 公告）。",
+          "type": "fact",
+          "sources": [
+            {
+              "label": "公司新聞稿",
+              "url": "https://www.dreamnews.jp/press/0000363443"
             }
           ]
         },
@@ -435,6 +461,54 @@
     }
   ],
   "news": [
+    {
+      "id": "reprocell-toho-distribution-2026-09",
+      "companyId": "reprocell",
+      "date": "2026-09-29",
+      "dateDisplay": "2026/09/29",
+      "level": "win",
+      "tag": "日本商業化",
+      "relation": "direct",
+      "type": "fact",
+      "body": "REPROCELL 揭露已於 <b>2026-09-17</b> 與 <b>東邦ホールディングス</b>（日本大型醫藥品批發）簽訂 Stemchymal® <b>國內流通基本合意書</b>：取得製造販売承認後，運用東邦 HD 集團的醫藥品流通網路供應全國醫療機構，並共同建立適合再生醫療等製品特性的流通體制。公司表示對本期業績影響「現時點では軽微」。",
+      "note": "→ 與仲恩的關聯：<b>直接相關</b>。這是 Stemchymal 在日本<b>上市後通路</b>的第一個具名夥伴。至此承認申請（6/24 送件）、MAH 業許可（9/18 取得）、國內通路（9/17 合意）都已到位，剩下的關鍵是 PMDA 的製造販売承認本身。公告未載明獨家與否，且屬基本合意（非正式契約），正式契約時程未揭露（事實）。",
+      "links": [
+        {
+          "label": "TDnet 適時開示 PDF",
+          "url": "https://ssl4.eir-parts.net/doc/4978/tdnet/2888496/00.pdf"
+        },
+        {
+          "label": "公司新聞稿",
+          "url": "https://www.dreamnews.jp/press/0000363852"
+        },
+        {
+          "label": "日刊薬業報導",
+          "url": "https://nk.jiho.jp/article/305466"
+        }
+      ]
+    },
+    {
+      "id": "reprocell-mah-license-2026-09",
+      "companyId": "reprocell",
+      "date": "2026-09-24",
+      "dateDisplay": "2026/09/24",
+      "level": "win",
+      "tag": "日本監管",
+      "relation": "direct",
+      "type": "fact",
+      "body": "REPROCELL 取得神奈川縣核發之<b>再生医療等製品製造販売業許可</b>（許可日 <b>2026-09-18</b>），即 6/18 送件的 MAH「業許可」。公司說明：取得後，Stemchymal® 一旦獲製造販売承認，即由 REPROCELL 以製造販売業者（製造販売元）身分負責國內供給；對本期業績影響輕微。",
+      "note": "→ 與仲恩的關聯：<b>直接相關</b>。上市需要兩張執照：公司層級的「業許可」（本則，已取得）與產品層級的「製造販売承認」（6/24 送 PMDA，審查中）。剩下的關鍵是後者（事實）。",
+      "links": [
+        {
+          "label": "TDnet 適時開示 PDF",
+          "url": "https://ssl4.eir-parts.net/doc/4978/tdnet/2886804/00.pdf"
+        },
+        {
+          "label": "公司新聞稿",
+          "url": "https://www.dreamnews.jp/press/0000363443"
+        }
+      ]
+    },
     {
       "id": "scm-half-report-2026-08",
       "companyId": "scm-lifescience",
@@ -711,13 +785,13 @@
       ]
     },
     {
-      "text": "REPROCELL 方面，近 12 個月與 Stemchymal 直接相關的公開消息集中在 2026-06 的兩件送件；其餘為公司自身的資本與財報事項。",
+      "text": "REPROCELL 方面，與 Stemchymal 直接相關的公開消息集中在 2026-06 的兩件送件，以及 2026-09 的業許可取得與東邦 HD 流通合意；其餘為公司自身的資本與財報事項。",
       "affects": [
         "reprocell"
       ]
     },
     {
-      "text": "本區為人工策展，不做自動新聞爬取。若需即時性，應由每日掃描產生條目後併入 news[]（欄位已對齊）。",
+      "text": "本區「夥伴動態」為人工策展（每則附判讀）；每日自動蒐集的標題另見上方「最新消息（自動彙整）」卡。自動卡中與仲恩直接相關者，經覆核後補進本區。",
       "affects": [
         "reprocell",
         "scm-lifescience"
