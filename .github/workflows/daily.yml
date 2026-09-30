@@ -30,6 +30,7 @@ on:
 
 permissions:
   contents: write
+  issues: write # 夥伴消息通知（alert_partners_news.py 開 Issue）
 
 # 所有腳本的 date.today() 都以台北時間為準。runner 是 UTC，排程被延遲到台北午夜
 # 之後時，UTC 日期會比台北慢一天，meta.updated_at 就會跟 commit 訊息對不上。
@@ -112,6 +113,17 @@ jobs:
         continue-on-error: true
         timeout-minutes: 8
         run: python scripts/fetch_partners_news.py
+
+      # 夥伴出現與仲恩相關的新消息（標題含 Stemchymal／仲恩等關鍵字）→ 開 GitHub Issue 並 @SteminentTW，
+      # GitHub 會寄 Email 與推播。讀上一步的 data/partners_news.json，不另外抓來源、不寫任何檔案。
+      # 同一則只通知一次（id 記在 Issue 內文）。通知失敗不該擋發佈，所以 continue-on-error。
+      - name: 夥伴消息通知
+        continue-on-error: true
+        timeout-minutes: 5
+        working-directory: scripts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python alert_partners_news.py
 
       # 對 2026-07-21 黃金樣本回歸測試。沒過就讓整個工作失敗、不要發佈 ——
       # 寧可網頁停在昨天的資料，也不要把錯的數字推上去。

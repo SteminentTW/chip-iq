@@ -2,20 +2,17 @@
 """
 海外夥伴出現「與仲恩相關」的新消息時，自動開 GitHub Issue 通知 → repo 擁有者收到 Email／App 推播
 
-由 .github/workflows/partner_alert.yml 在工作日白天每 2 小時執行一次。
+由 daily.yml 在 fetch_partners_news.py 之後執行（跟每日更新同一班，台北 18:17／20:47／隔天 06:00）。
+不另外抓來源：直接讀剛產出的 data/partners_news.json（已去重、已翻譯），不多打請求。
 
-刻意**不寫任何資料檔、不 commit**：
-  - 網站資料仍只由 daily.yml 更新，守門員照舊把關
-  - daily.yml 的 06:00 補跑班靠「HEAD 是不是機器人 16 小時內的 commit」判斷要不要跑，
-    這裡若也 commit，會讓補跑班誤以為昨晚已更新而略過
-所以「通知過哪些」不存在 repo 裡，而是存在 Issue 本身：每張 Issue 內文帶一行
-<!-- partner-alert-id: xxx -->，下次執行先列出已開過的 Issue、比對 id，同一則只通知一次。
+本腳本不寫任何資料檔。「通知過哪些」不存在 repo 裡，而是存在 Issue 本身：每張 Issue 內文
+帶一行 <!-- partner-alert-id: xxx -->，下次執行先列出已開過的 Issue、比對 id，同一則只通知一次。
 
 判斷「與仲恩相關」：標題（原文或中文譯文）含 KEYWORDS 任一個。寧可少報不要亂報，
 關鍵字只放 Stemchymal 與仲恩本身的各語言寫法、Stemchymal 目前的適應症，以及日本再生醫療監管用語。
 
-失敗處理：任何來源抓不到就跳過該來源、exit 0；GitHub API 失敗才 exit 1（讓 Actions 顯示紅燈，
-因為那代表通知機制本身壞了）。本工作與 daily.yml 完全獨立，失敗不影響網站更新。
+失敗處理：GitHub API 失敗會 exit 1，但 daily.yml 該步驟設了 continue-on-error，
+通知壞掉不會擋住當晚發佈（log 裡看得到錯誤）。
 
 用法：python alert_partners_news.py [--dry-run]
   需要環境變數 GITHUB_TOKEN、GITHUB_REPOSITORY（Actions 內建）；--dry-run 只印出會通知的條目。
@@ -71,24 +68,13 @@ def main():
     dry = "--dry-run" in sys.argv
     cut = (datetime.now(news.TPE).date() - timedelta(days=LOOKBACK_DAYS)).isoformat()
 
+    doc = news.load_json(news.OUT) or {}
     hits = []
-    for src in news.SOURCES:
-        try:
-            got = news.fetch_source(src)
-        except Exception as e:
-            print(f"  {src['id']:<20} 抓取失敗，略過（{type(e).__name__}: {e}）")
-            continue
-        for i in got:
-            if i["date"] >= cut:
-                kw = relevant(i)
-                if kw:
-                    hits.append((i, kw))
-        print(f"  {src['id']:<20} {len(got):>3} 則")
-
-    # 同一事件的媒體轉載只通知一次（沿用網站的去重規則）
-    keep = {id(i) for i in news.drop_reposts(
-        sorted((h[0] for h in hits), key=lambda x: x["published_at"], reverse=True))}
-    hits = [h for h in hits if id(h[0]) in keep]
+    for i in doc.get("items", []):
+        if i["date"] >= cut:
+            kw = relevant(i)
+            if kw:
+                hits.append((i, kw))
     print(f"\n符合關鍵字的新消息 {len(hits)} 則")
     if not hits:
         return
@@ -99,10 +85,12 @@ def main():
     for i, kw in hits:
         if i["id"] in done:
             continue
-        try:
-            zh = news.translate(i["title"])
-        except Exception:
-            zh = None
+        zh = i.get("title_zh")
+        if not zh:
+            try:
+                zh = news.translate(i["title"])
+            except Exception:
+                zh = None
         co = names.get(i["companyId"], i["companyId"])
         kind = "公司公告" if i["kind"] == "official" else "媒體報導"
         title = f"【夥伴消息】{co}：{(zh or i['title'])[:80]}"
