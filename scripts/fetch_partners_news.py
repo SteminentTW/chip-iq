@@ -134,7 +134,10 @@ def parse_ir_html(raw, src):
     """日本版 IR news 頁：每列是「YYYY.MM.DD ＋ 連到 eir-parts.net 開示 PDF 的標題連結」。
 
     不綁 class 名稱（改版就會失效），改成依文件順序掃描：每個指向 eir-parts.net／PDF 的
-    連結，取它前方 400 字內最近的一個日期。頁面上其他導覽連結不是 PDF，自然不會被收進來。
+    連結，日期優先取連結**內部**的日期；連結內沒有日期時，才取它前方 400 字內最近的一個。
+    （2026-09-30 首次上線時先取前方日期，而實際頁面的日期在連結內，前方那個是**上一則**的
+    日期，結果整串錯位一則：9/24 的業許可取得被標成 9/28。）
+    頁面上其他導覽連結不是 PDF，自然不會被收進來。
     日期是日本時間的開示日，直接當 date，不做時區換算（換算會讓日期跑掉）。
     """
     html = raw.decode("utf-8", errors="replace")
@@ -150,7 +153,7 @@ def parse_ir_html(raw, src):
         url = safe_url(href)
         title = clean(m.group(2))
         before = clean(html[max(0, m.start() - 400):m.start()])
-        dates = _DATE.findall(before) or _DATE.findall(title)
+        dates = _DATE.findall(title) or _DATE.findall(before)
         if not url or not title or not dates or url in seen:
             continue
         y, mo, d = (int(x) for x in dates[-1])
@@ -158,7 +161,8 @@ def parse_ir_html(raw, src):
             dt = datetime(y, mo, d, 12, tzinfo=JST)
         except ValueError:
             continue
-        title = _DATE.sub("", title).strip(" 　|｜-")
+        # 連結內除了日期，還有分類與「›」箭頭圖示文字，一併去掉
+        title = _DATE.sub("", title, count=1).strip(" 　|｜-›»>")
         if not title:
             continue
         seen.add(url)
@@ -266,11 +270,14 @@ def main():
                            "kept_previous": old_n})
             print(f"  {src['id']:<20} 抓取失敗（{err}）→ 沿用上次 {old_n} 則")
 
-    # 合併：新抓到的優先（標題／連結可能被更正），舊的補上本次沒出現的；以 id 去重，
-    # 同一篇新聞被官方與媒體同時收錄時，官方那筆優先。
+    # 合併：本次抓成功的來源，以新資料**整批取代**該來源的舊條目（舊條目的日期或標題若是
+    # 解析錯誤產生的，這樣下一次就會自動修正，不會殘留 120 天）；抓失敗的來源才沿用舊條目。
+    # 以 id 去重，同一篇新聞被官方與媒體同時收錄時，官方那筆優先。
+    ok_sources = {s["id"] for s in status if s["ok"]}
+    carried = [i for i in prev_items if i.get("source") not in ok_sources]
     first_seen = {i["id"]: i.get("first_seen") for i in prev_items}
     merged = {}
-    for i in sorted(fresh + prev_items, key=lambda x: x.get("kind") != "official"):
+    for i in sorted(fresh + carried, key=lambda x: x.get("kind") != "official"):
         if i["id"] in merged:
             continue
         i = dict(i)
