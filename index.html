@@ -147,6 +147,9 @@
   .ptip .r{color:#ffce7a}
   .nw{padding:13px 0 13px 15px;border-left:3px solid #2b3a4d;border-bottom:1px solid #1c2a39}
   .nw:last-child{border-bottom:none}
+  .ptnMore summary{cursor:pointer;padding:12px 0;color:#7fb3e6;font-size:13px;border-top:1px solid #1c2a39}
+  .ptnMore summary:hover{color:#a9cdf2}
+  .ptnMore[open] summary{color:#8b9bb0}
   .nw.win{border-left-color:#3dd68c}
   .nw.hot{border-left-color:#ffce7a}
   .nw.info{border-left-color:#4da3ff}
@@ -169,7 +172,7 @@
   <div class="wrap">
     <div class="brand">
       <div>
-        <div class="logo">7729 <b>仲恩生醫</b> <a class="v" href="versions.html" title="版本紀錄與維運說明">籌碼與市值監測 · v0.7.2 ↗</a></div>
+        <div class="logo">7729 <b>仲恩生醫</b> <a class="v" href="versions.html" title="版本紀錄與維運說明">籌碼與市值監測 · v0.7.3 ↗</a></div>
         <div class="tag"><span class="live"></span>興櫃 · 資料源 TPEx 公開資訊 · <span id="rangeTag">—</span></div>
       </div>
       <div class="meta">
@@ -412,7 +415,7 @@
 </section>
 
 <div class="foot">
-  <b>7729 籌碼與市值監測 v0.7.2</b>　<a href="versions.html" style="color:#8b9bb0">版本紀錄 ↗</a>　|　價量與市值：TWSE／TPEx／公開資訊觀測站　|　分點進出：TPEx 興櫃買賣日報表（EMdss004）＋ TWSE 證券商基本資料，皆程式化每日更新<br>
+  <b>7729 籌碼與市值監測 v0.7.3</b>　<a href="versions.html" style="color:#8b9bb0">版本紀錄 ↗</a>　|　價量與市值：TWSE／TPEx／公開資訊觀測站　|　分點進出：TPEx 興櫃買賣日報表（EMdss004）＋ TWSE 證券商基本資料，皆程式化每日更新<br>
   海外授權夥伴：價量取自 Yahoo Finance v8 chart（免憑證公開端點），發行股數與公司事件取自各國官方揭露（日本決算短信／韓國 DART、KIND），人工覆核後落地為資料，每筆附來源與基準日<br>
   興櫃採議價交易、由推薦證券商造市，<b>造市商成交均價顯示 0.00 屬正常結構性現象</b>，非資料缺漏。<br>
   本頁所有內容均來自公開資料，不含任何非公開資訊，亦不構成投資建議。<br>  股價與市值為程式自動抓取；授權關係、進度與消息為人工整理，各條均附來源連結與整理日期。
@@ -1885,8 +1888,12 @@ function ptnCoName(id){
 function ptnAutoNews(){
   if(!PN||!PN.items) return '';
   var list=PN.items.filter(function(n){return ptnCo==='all'||n.companyId===ptnCo;});
-  var shown=list.slice(0,ptnCo==='all'?20:30);
-  var rows=shown.map(function(n){
+  /* 摺疊：預設只顯示近 3 個月（以瀏覽當天往回算），更早的收在「展開」裡 */
+  var cut=new Date();cut.setMonth(cut.getMonth()-3);
+  var cutS=cut.getFullYear()+'-'+('0'+(cut.getMonth()+1)).slice(-2)+'-'+('0'+cut.getDate()).slice(-2);
+  var recent=list.filter(function(n){return n.date>=cutS;});
+  var older=list.filter(function(n){return n.date<cutS;});
+  function row(n){
     var url=/^https?:\/\//i.test(n.url||'')?n.url:'';
     /* 標題以中文機器翻譯為主、原文放下方；還沒翻到的顯示原文 */
     var t=esc(n.title_zh||n.title);
@@ -1899,7 +1906,11 @@ function ptnAutoNews(){
       +'<div class="bd">'+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener" style="color:#dbe7f3">'+t+' ↗</a>':t)+'</div>'
       +(n.title_zh?'<div style="font-size:11px;color:#8b9bb0;margin-top:4px">原文：'+esc(n.title)+'</div>':'')
       +'</div>';
-  }).join('');
+  }
+  var rows=recent.map(row).join('')
+    ||(list.length?'<div class="empty">近 3 個月無消息</div>':'');
+  if(older.length) rows+='<details class="ptnMore"><summary>展開更早的 '+older.length+' 則消息（3 個月以前）</summary>'
+    +older.map(row).join('')+'</details>';
   var m=PN.meta||{},gen=m.generated_at||'';
   var bad=(m.sources||[]).filter(function(x){return !x.ok;});
   var tr=m.translation||{};
@@ -1910,7 +1921,7 @@ function ptnAutoNews(){
       +bad.map(function(x){return esc(x.label);}).join('、')+'</div>' : '';
   return '<div class="card"><h2>◎ 最新消息（自動彙整） <small>'
     +(gen.length>=16?'更新 '+esc(gen.slice(0,10)+' '+gen.slice(11,16))+'（台北）':'')
-    +'　顯示 '+shown.length+' ／ '+list.length+' 則</small></h2>'
+    +'　近 3 個月 '+recent.length+' 則，全部 '+list.length+' 則</small></h2>'
     +(rows||'<div class="empty">此篩選條件下無消息</div>')+warn+trWarn
     +'<div class="tip">'+esc(m.note||'')+'<br><b>來源</b>　'
     +(m.sources||[]).map(function(x){return esc(ptnCoName(x.companyId))+'：'+esc(x.label);}).join('　')
