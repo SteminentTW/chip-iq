@@ -104,6 +104,15 @@ jobs:
       - name: 抓海外夥伴行情
         run: python scripts/fetch_partners.py
 
+      # 海外夥伴最新消息（REPROCELL 官網 RSS＋Google News RSS）→ data/partners_news.json。
+      # 新聞是附加資訊：任何失敗都不該擋住當晚發佈，所以這一步刻意 continue-on-error。
+      # 腳本自己也會在來源失敗時沿用上一次的條目、exit 0；這裡是 crash 時的第二道保險。
+      # 本檔不經任何守門員，也不寫 partners_profile.json（人工策展區）。
+      - name: 抓海外夥伴最新消息
+        continue-on-error: true
+        timeout-minutes: 8
+        run: python scripts/fetch_partners_news.py
+
       # 對 2026-07-21 黃金樣本回歸測試。沒過就讓整個工作失敗、不要發佈 ——
       # 寧可網頁停在昨天的資料，也不要把錯的數字推上去。
       - name: 回歸測試（分點）

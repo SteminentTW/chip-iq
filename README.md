@@ -15,7 +15,7 @@
 | 分點追蹤 | 選定分點看每日淨額時間序列與累計曲線 | 實際資料 |
 | 市值戰報 | 生技全市場排名與大盤 Top 30、市值走勢、區間統計、量能 | 實際資料 |
 | 同業比較 | 台灣再生醫療 12 檔相對表現、排名、規模對比、逐檔對帳 | 實際資料 |
-| 合作夥伴 | 海外授權夥伴 REPROCELL（4978.T）與 풍전약품（298060.KQ）的股價（可切還原後／當時實際）、市值（原幣、不回推歷史）、Pipeline、最新消息 | 價量與市值為實際資料（Yahoo 抓不到時沿用上一版並標示）；Pipeline、消息為人工策展 |
+| 合作夥伴 | 海外授權夥伴 REPROCELL（4978.T）與 풍전약품（298060.KQ）的股價（可切還原後／當時實際）、市值（原幣、不回推歷史）、Pipeline、最新消息 | 價量與市值為實際資料（Yahoo 抓不到時沿用上一版並標示）；Pipeline 與「夥伴動態」為人工策展；「最新消息（自動彙整）」每日抓 REPROCELL 日本版 IR news／官網 RSS 與 Google News RSS，只列標題與連結、未經覆核 |
 
 ## 券商分點：資料源與坑
 
@@ -227,6 +227,7 @@ data/broker_fixture.json    2026-07-21 黃金樣本（對帳腳本與前端對�
 data/partners.json          海外授權夥伴價量、市值、公司事件（fetch_partners.py 產出）
 data/partners_ref.json      夥伴股數與公司事件的人工維護正本（fetch_partners.py 的輸入）
 data/partners_profile.json  夥伴的授權關係、Pipeline、新聞等敘事（人工策展）
+data/partners_news.json     夥伴最新消息自動彙整（scripts/fetch_partners_news.py 產出，失敗時沿用上次、不擋發佈）
 data/versions.json          版本紀錄
 cache/7729/YYYYMMDD.json    分點每日快取（一天一檔，進版控，換機器跑免重新回補）
 scripts/fetch_*.py          資料抓取腳本（僅用 Python 標準函式庫，無需 pip install）
