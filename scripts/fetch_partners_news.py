@@ -67,7 +67,9 @@ KEEP_DAYS = 120
 # 官方與媒體分開計額度：2026-09-30 首次上線時，Google News 單日就有 25 則 REPROCELL
 # 報導（多是同一件事的轉載），共用 30 則額度會把官方 IR 擠到只剩 5 則。
 MAX_OFFICIAL_PER_COMPANY = 30
-MAX_MEDIA_PER_COMPANY = 10
+MAX_MEDIA_PER_COMPANY = 5
+# 媒體標題相似度（字元二元組 Jaccard）超過這個值、且日期相差 3 天內，視為同一事件的轉載，只留最早一則
+SIMILAR_TITLE = 0.45
 
 
 def gnews(q, hl, gl):
@@ -81,10 +83,13 @@ SOURCES = [
      "label": "REPROCELL 日本版 IR news", "url": "https://reprocell.co.jp/ir/news/"},
     {"id": "reprocell-official", "companyId": "reprocell", "kind": "official",
      "label": "REPROCELL 日本版官網公告", "url": "https://reprocell.co.jp/feed/"},
-    {"id": "reprocell-gnews", "companyId": "reprocell", "kind": "media",
-     "label": "Google News（日文）", "url": gnews("リプロセル", "ja", "JP")},
+    # REPROCELL 不收 Google News（2026-09-30 使用者回饋「太多太雜、很多重複」）：
+    # 官方 IR news＋官網公告已涵蓋所有公司事件，媒體多是同一公告的轉載或「3日ぶり反発」這類
+    # 股價短評。풍전약품沒有可用的官方來源，只能靠媒體，所以保留並加上過濾。
     {"id": "scm-gnews", "companyId": "scm-lifescience", "kind": "media",
-     "label": "Google News（韓文）", "url": gnews('"풍전약품" OR "SCM생명과학"', "ko", "KR")},
+     "label": "Google News（韓文）", "url": gnews('"풍전약품" OR "SCM생명과학"', "ko", "KR"),
+     # 例行、無事件內容的標題：股票網站每週自動產生的「투자분석」、盤勢短評等
+     "exclude": r"투자분석|특징주|주가\s*(급등|급락|상승|하락)|오늘의\s*(종목|주식)|前場コメント|本日のおすすめ銘柄"},
 ]
 
 
@@ -104,6 +109,31 @@ def clean(s):
 def norm_title(t):
     t = unicodedata.normalize("NFKC", t or "")
     return re.sub(r"[\W_]+", "", t).lower()
+
+
+def _bigrams(t):
+    t = norm_title(t)
+    return {t[k:k + 2] for k in range(len(t) - 1)}
+
+
+def drop_reposts(items):
+    """同一事件被多家媒體轉載時只留最早的一則；轉載官方公告的媒體條目也丟掉。"""
+    kept = []
+    # 官方公告先放進比對清單：媒體轉載官方公告（標題略改）也算重複
+    seen = [(i["companyId"], date.fromisoformat(i["date"]), _bigrams(i["title"]))
+            for i in items if i["kind"] != "media"]
+    for i in reversed(items):  # 由舊到新，保留最早報導
+        if i["kind"] != "media":
+            kept.append(i)
+            continue
+        bg, d = _bigrams(i["title"]), date.fromisoformat(i["date"])
+        dup = any(c == i["companyId"] and abs((d - d2).days) <= 3 and bg and b2
+                  and len(bg & b2) / len(bg | b2) >= SIMILAR_TITLE
+                  for c, d2, b2 in seen)
+        if not dup:
+            seen.append((i["companyId"], d, bg))
+            kept.append(i)
+    return list(reversed(kept))
 
 
 def safe_url(u):
@@ -255,6 +285,8 @@ def main():
                                            "application/rss+xml, application/xml"},
                               timeout=30)
             got = (parse_ir_html if html else parse_rss)(raw, src)
+            if src.get("exclude"):
+                got = [i for i in got if not re.search(src["exclude"], i["title"])]
             if not got:
                 # IR 頁若改成 JS 動態載入，這裡會是 0 則 → 記為失敗並沿用上次，卡片上會顯示
                 raise RuntimeError("解析後 0 則（頁面結構可能已改版）")
@@ -274,7 +306,13 @@ def main():
     # 解析錯誤產生的，這樣下一次就會自動修正，不會殘留 120 天）；抓失敗的來源才沿用舊條目。
     # 以 id 去重，同一篇新聞被官方與媒體同時收錄時，官方那筆優先。
     ok_sources = {s["id"] for s in status if s["ok"]}
-    carried = [i for i in prev_items if i.get("source") not in ok_sources]
+    # 已從 SOURCES 移除的來源，其舊條目一併丟掉
+    live = {s["id"] for s in SOURCES}
+    carried = [i for i in prev_items
+               if i.get("source") in live and i.get("source") not in ok_sources]
+    excl = {s["id"]: s.get("exclude") for s in SOURCES}
+    carried = [i for i in carried
+               if not (excl.get(i["source"]) and re.search(excl[i["source"]], i["title"]))]
     first_seen = {i["id"]: i.get("first_seen") for i in prev_items}
     merged = {}
     for i in sorted(fresh + carried, key=lambda x: x.get("kind") != "official"):
@@ -291,6 +329,7 @@ def main():
     official_titles = {norm_title(i["title"]) for i in items if i["kind"] == "official"}
     items = [i for i in items
              if i["kind"] == "official" or norm_title(i["title"]) not in official_titles]
+    items = drop_reposts(items)
     per, kept = {}, []
     for i in items:
         key = (i["companyId"], i["kind"])
