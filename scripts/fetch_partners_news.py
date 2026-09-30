@@ -61,6 +61,16 @@ GLOSSARY = {"풍전약품": "Poongjeon", "SCM생명과학": "SCM Lifescience",
             "에스씨엠생명과학": "SCM Lifescience", "リプロセル": "REPROCELL",
             # 產品名：日文片假名會被音譯成「Stem Kaimal」
             "ステムカイマル": "Stemchymal", "스템카이말": "Stemchymal"}
+# 換成英文仍不夠：Google 會把「Poongjeon」在部分句子裡又譯回「豐田（公司／製藥）」，
+# 2026-09-30 的實際輸出有 2 則如此。原文有 풍전 時，譯文裡的「豐田…」一律改回 Poongjeon。
+_ZH_FIX = [("풍전", re.compile(r"豐田(?:製藥|藥品|醫藥|公司)?"), "Poongjeon")]
+
+
+def fix_zh(original, zh):
+    for key, pat, name in _ZH_FIX:
+        if key in original:
+            zh = pat.sub(name, zh)
+    return zh
 
 # 保留多久、每家最多幾則。畫面上只是「最近發生什麼事」，舊的留在人工策展區。
 KEEP_DAYS = 120
@@ -230,6 +240,7 @@ def parse_rss(raw, src):
 def translate(text):
     """單次呼叫、不走 _http 的重試：翻譯是附加資訊，失敗就等下次排程。"""
     import urllib.request
+    text_orig = text
     for k, v in GLOSSARY.items():
         text = text.replace(k, v)
     req = urllib.request.Request(TRANSLATE + quote(text), headers={"User-Agent": UA})
@@ -238,7 +249,7 @@ def translate(text):
     zh = "".join(seg[0] for seg in (j[0] or []) if seg and seg[0]).strip()
     if not zh:
         raise RuntimeError("翻譯結果為空")
-    return zh
+    return fix_zh(text_orig, zh)
 
 
 def add_translations(items, prev_zh):
@@ -247,7 +258,7 @@ def add_translations(items, prev_zh):
     err = None
     for i in items:
         if prev_zh.get(i["id"]):
-            i["title_zh"] = prev_zh[i["id"]]
+            i["title_zh"] = fix_zh(i["title"], prev_zh[i["id"]])
             i["title_zh_v"] = TRANSLATION_VERSION
             continue
         if err or done >= MAX_TRANSLATE_PER_RUN:
