@@ -5,7 +5,7 @@
     "title": "合作夥伴頁籤的「最新消息」改為每日自動彙整",
     "changes": [
       "需求：合作夥伴頁籤原本只有價量是每日更新，最新消息停在 2026-08-16 的人工策展，看不到夥伴近期動態。",
-      "新增 scripts/fetch_partners_news.py，每日排程抓 REPROCELL 官網 RSS（公司公告）與 Google News RSS（REPROCELL 日文、풍전약품／SCM생명과학 韓文媒體報導），寫入 data/partners_news.json，保留近 120 天、每家最多 30 則。",
+      "新增 scripts/fetch_partners_news.py，每日排程抓 REPROCELL 日本版 IR news（TDnet 適時開示，reprocell.co.jp/ir/news/）與日本版官網 RSS（一般公告）與 Google News RSS（REPROCELL 日文、풍전약품／SCM생명과학 韓文媒體報導），寫入 data/partners_news.json，保留近 120 天、每家最多 30 則。",
       "前端 ④ 最新消息新增「最新消息（自動彙整）」卡，排在人工策展的「夥伴動態」之上，共用同一個公司篩選；標示為未經人工覆核，連結只接受 http／https。",
       "失敗不擋發佈：單一來源抓不到時沿用上次條目並在卡片上註明，workflow 該步驟另設 continue-on-error。四道守門員與 partners_profile.json 皆未更動。"
     ]

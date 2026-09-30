@@ -8,8 +8,13 @@
   前端標示為「自動彙整、未經人工覆核」。本檔絕不寫入 partners_profile.json。
 
 來源（皆為公開 RSS、免憑證，與本站零憑證原則一致）：
-  REPROCELL  ① 公司官網 WordPress RSS https://reprocell.co.jp/feed/（公司公告）
-             ② Google News RSS「リプロセル」（媒體報導）
+  REPROCELL  ① 日本版 IR news https://reprocell.co.jp/ir/news/（適時開示，HTML 解析）
+             ② 日本版官網 WordPress RSS https://reprocell.co.jp/feed/（一般公告）
+             ③ Google News RSS「リプロセル」（媒體報導）
+             REPROCELL 官網分國際版（reprocell.com）與日本版（reprocell.co.jp），詳細資訊只在日本版。
+             而且 IR news（TDnet 適時開示 PDF，託管在 eir-parts.net）**不在** WordPress RSS 裡，
+             例如 2026-09-29 與東邦 HD 的 Stemchymal 國內流通基本合意書只出現在 IR news，
+             所以 ① 必須另外抓，不能只靠 ②。
   풍전약품    ① Google News RSS「풍전약품 OR SCM생명과학」（媒體報導）
              官網 scmlifescience.com 的憑證與網域不符、DART 的 RSS 只有全市場最新 25 筆，
              兩者都不適合排程，故韓國這家只有媒體來源；公司公告仍以人工策展的 DART 連結為準。
@@ -51,8 +56,10 @@ def gnews(q, hl, gl):
 
 # companyId 與 partners_profile.json 的 partners[].id 一致，前端靠它套用同一個公司篩選。
 SOURCES = [
+    {"id": "reprocell-ir", "companyId": "reprocell", "kind": "official", "parser": "ir_html",
+     "label": "REPROCELL 日本版 IR news", "url": "https://reprocell.co.jp/ir/news/"},
     {"id": "reprocell-official", "companyId": "reprocell", "kind": "official",
-     "label": "REPROCELL 官網公告", "url": "https://reprocell.co.jp/feed/"},
+     "label": "REPROCELL 日本版官網公告", "url": "https://reprocell.co.jp/feed/"},
     {"id": "reprocell-gnews", "companyId": "reprocell", "kind": "media",
      "label": "Google News（日文）", "url": gnews("リプロセル", "ja", "JP")},
     {"id": "scm-gnews", "companyId": "scm-lifescience", "kind": "media",
@@ -78,6 +85,62 @@ def safe_url(u):
     return u if re.match(r"^https?://", u, re.I) else None
 
 
+JST = timezone(timedelta(hours=9))
+_DATE = re.compile(r"(20\d\d)[./年-]\s*(\d{1,2})[./月-]\s*(\d{1,2})")
+_A = re.compile(r"<a\b[^>]*\bhref\s*=\s*[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", re.S | re.I)
+
+
+def item(src, day, dt, title, publisher, url):
+    return {
+        "id": hashlib.sha1((src["companyId"] + "|" + title).encode("utf-8")).hexdigest()[:12],
+        "companyId": src["companyId"],
+        "date": day,
+        "published_at": dt.isoformat(),
+        "title": title,
+        "publisher": publisher,
+        "url": url,
+        "kind": src["kind"],
+        "source": src["id"],
+    }
+
+
+def parse_ir_html(raw, src):
+    """日本版 IR news 頁：每列是「YYYY.MM.DD ＋ 連到 eir-parts.net 開示 PDF 的標題連結」。
+
+    不綁 class 名稱（改版就會失效），改成依文件順序掃描：每個指向 eir-parts.net／PDF 的
+    連結，取它前方 400 字內最近的一個日期。頁面上其他導覽連結不是 PDF，自然不會被收進來。
+    日期是日本時間的開示日，直接當 date，不做時區換算（換算會讓日期跑掉）。
+    """
+    html = raw.decode("utf-8", errors="replace")
+    items, seen = [], set()
+    for m in _A.finditer(html):
+        href = unescape(m.group(1)).strip()
+        if "eir-parts.net" not in href and not href.lower().endswith(".pdf"):
+            continue
+        if href.startswith("//"):
+            href = "https:" + href
+        elif href.startswith("/"):
+            href = "https://reprocell.co.jp" + href
+        url = safe_url(href)
+        title = clean(m.group(2))
+        before = clean(html[max(0, m.start() - 400):m.start()])
+        dates = _DATE.findall(before) or _DATE.findall(title)
+        if not url or not title or not dates or url in seen:
+            continue
+        y, mo, d = (int(x) for x in dates[-1])
+        try:
+            dt = datetime(y, mo, d, 12, tzinfo=JST)
+        except ValueError:
+            continue
+        title = _DATE.sub("", title).strip(" 　|｜-")
+        if not title:
+            continue
+        seen.add(url)
+        items.append(item(src, dt.strftime("%Y-%m-%d"), dt.astimezone(TPE), title,
+                          "TDnet 適時開示" if "tdnet" in url else "REPROCELL IR", url))
+    return items
+
+
 def parse_rss(raw, src):
     """RSS 2.0 → 條目 list。Google News 的標題是「標題 - 媒體名」，媒體名另在 <source>。"""
     root = ET.fromstring(raw)
@@ -100,17 +163,7 @@ def parse_rss(raw, src):
             publisher = publisher or src["label"].replace("公告", "").strip()
         elif publisher and title.endswith(" - " + publisher):
             title = title[: -len(" - " + publisher)].rstrip()
-        items.append({
-            "id": hashlib.sha1((src["companyId"] + "|" + title).encode("utf-8")).hexdigest()[:12],
-            "companyId": src["companyId"],
-            "date": dt.strftime("%Y-%m-%d"),
-            "published_at": dt.isoformat(),
-            "title": title,
-            "publisher": publisher,
-            "url": url,
-            "kind": src["kind"],
-            "source": src["id"],
-        })
+        items.append(item(src, dt.strftime("%Y-%m-%d"), dt, title, publisher, url))
     return items
 
 
@@ -124,12 +177,15 @@ def main():
     fresh, status = [], []
     for src in SOURCES:
         try:
+            html = src.get("parser") == "ir_html"
             raw = fetch_bytes(src["url"], {"User-Agent": UA,
-                                           "Accept": "application/rss+xml, application/xml"},
+                                           "Accept": "text/html" if html else
+                                           "application/rss+xml, application/xml"},
                               timeout=30)
-            got = parse_rss(raw, src)
+            got = (parse_ir_html if html else parse_rss)(raw, src)
             if not got:
-                raise RuntimeError("RSS 解析後 0 則")
+                # IR 頁若改成 JS 動態載入，這裡會是 0 則 → 記為失敗並沿用上次，卡片上會顯示
+                raise RuntimeError("解析後 0 則（頁面結構可能已改版）")
             fresh.extend(got)
             status.append({"id": src["id"], "companyId": src["companyId"], "label": src["label"],
                            "kind": src["kind"], "ok": True, "count": len(got)})
