@@ -169,7 +169,7 @@
   <div class="wrap">
     <div class="brand">
       <div>
-        <div class="logo">7729 <b>仲恩生醫</b> <a class="v" href="versions.html" title="版本紀錄與維運說明">籌碼與市值監測 · v0.6.4 ↗</a></div>
+        <div class="logo">7729 <b>仲恩生醫</b> <a class="v" href="versions.html" title="版本紀錄與維運說明">籌碼與市值監測 · v0.7.0 ↗</a></div>
         <div class="tag"><span class="live"></span>興櫃 · 資料源 TPEx 公開資訊 · <span id="rangeTag">—</span></div>
       </div>
       <div class="meta">
@@ -412,7 +412,7 @@
 </section>
 
 <div class="foot">
-  <b>7729 籌碼與市值監測 v0.6.4</b>　<a href="versions.html" style="color:#8b9bb0">版本紀錄 ↗</a>　|　價量與市值：TWSE／TPEx／公開資訊觀測站　|　分點進出：TPEx 興櫃買賣日報表（EMdss004）＋ TWSE 證券商基本資料，皆程式化每日更新<br>
+  <b>7729 籌碼與市值監測 v0.7.0</b>　<a href="versions.html" style="color:#8b9bb0">版本紀錄 ↗</a>　|　價量與市值：TWSE／TPEx／公開資訊觀測站　|　分點進出：TPEx 興櫃買賣日報表（EMdss004）＋ TWSE 證券商基本資料，皆程式化每日更新<br>
   海外授權夥伴：價量取自 Yahoo Finance v8 chart（免憑證公開端點），發行股數與公司事件取自各國官方揭露（日本決算短信／韓國 DART、KIND），人工覆核後落地為資料，每筆附來源與基準日<br>
   興櫃採議價交易、由推薦證券商造市，<b>造市商成交均價顯示 0.00 屬正常結構性現象</b>，非資料缺漏。<br>
   本頁所有內容均來自公開資料，不含任何非公開資訊，亦不構成投資建議。<br>  股價與市值為程式自動抓取；授權關係、進度與消息為人工整理，各條均附來源連結與整理日期。
@@ -1334,9 +1334,11 @@ function renderChipVal(){
                                    （每交易日由 scripts/fetch_partners.py 自動更新）
      data/partners_profile.json  → 敘事與時間軸：授權關係、Pipeline、觀察事項、新聞、推論、留白
                                    （人工策展，畫面上顯示最後整理日）
+     data/partners_news.json     → ④ 最新消息的「自動彙整」卡：各來源 RSS 的標題與連結
+                                   （每日由 scripts/fetch_partners_news.py 更新，不判讀、不覆核）
    兩檔以 partners.json 的 symbol ↔ partners_profile 的 yahooSymbol 對接，不靠 id（兩邊命名不同）。
    唯一刻意重複的是「額面併合」：看圖時需要旁註，時間軸上也需要該事件。 */
-var PT=null,PP=null,ptnDays=250,ptnRaw={},ptnCo='all';
+var PT=null,PP=null,PN=null,ptnDays=250,ptnRaw={},ptnCo='all';
 var PTCOLOR={'4978.T':'#5ed3f3','298060.KQ':'#c792ea'};
 
 /* 顏色是呈現設定不是資料：兩家先指名，日後若加第三家會自動配到不同色，不會撞色 */
@@ -1878,11 +1880,41 @@ function ptnCoName(id){
   var h=(PP.partners||[]).filter(function(x){return x.id===id;});
   return h.length?(h[0].name||h[0].displayName||id):id;
 }
+/* 自動彙整卡：只有標題、日期、媒體、連結，全部 esc()；連結再擋一次非 http(s)。
+   抓不到檔案時整張卡不顯示，不影響下方人工策展區。 */
+function ptnAutoNews(){
+  if(!PN||!PN.items) return '';
+  var list=PN.items.filter(function(n){return ptnCo==='all'||n.companyId===ptnCo;});
+  var shown=list.slice(0,ptnCo==='all'?12:20);
+  var rows=shown.map(function(n){
+    var url=/^https?:\/\//i.test(n.url||'')?n.url:'';
+    var t=esc(n.title);
+    return '<div class="nw '+(n.kind==='official'?'win':'info')+'">'
+      +'<div class="hd"><b style="color:#cfe0f2">'+esc(n.date)+'</b>　'
+      +'<span class="chip">'+esc(ptnCoName(n.companyId))+'</span>'
+      +'<span class="chip">'+(n.kind==='official'?'公司公告':'媒體報導')+'</span>'
+      +(n.publisher?'<span class="chip">'+esc(n.publisher)+'</span>':'')+'</div>'
+      +'<div class="bd">'+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener" style="color:#dbe7f3">'+t+' ↗</a>':t)+'</div>'
+      +'</div>';
+  }).join('');
+  var m=PN.meta||{},gen=m.generated_at||'';
+  var bad=(m.sources||[]).filter(function(x){return !x.ok;});
+  var warn=bad.length
+    ? '<div class="warn" style="margin-top:10px">本次有 '+bad.length+' 個來源抓取失敗，該來源顯示上次成功的結果：'
+      +bad.map(function(x){return esc(x.label);}).join('、')+'</div>' : '';
+  return '<div class="card"><h2>◎ 最新消息（自動彙整） <small>'
+    +(gen.length>=16?'更新 '+esc(gen.slice(0,10)+' '+gen.slice(11,16))+'（台北）':'')
+    +'　顯示 '+shown.length+' ／ '+list.length+' 則</small></h2>'
+    +(rows||'<div class="empty">此篩選條件下無消息</div>')+warn
+    +'<div class="tip">'+esc(m.note||'')+'<br><b>來源</b>　'
+    +(m.sources||[]).map(function(x){return esc(ptnCoName(x.companyId))+'：'+esc(x.label);}).join('　')
+    +'</div></div>';
+}
 function renderPtnNews(){
   var host=document.getElementById('ptnNews');
   document.getElementById('ptnCurated').textContent=(PP&&PP.curatedAtLabel)||'';
   if(!PP||!PP.news){
-    host.innerHTML='<div class="card"><div class="empty"><div class="big">—</div>'
+    host.innerHTML=ptnAutoNews()+'<div class="card"><div class="empty"><div class="big">—</div>'
       +'尚未取得 data/partners_profile.json，本區無資料</div></div>';
     return;
   }
@@ -1928,7 +1960,7 @@ function renderPtnNews(){
       +'：'+esc(PP.newsWindow.label):'')
     +'</div>';
 
-  host.innerHTML='<div class="card"><h2>◎ 夥伴動態 <small>'
+  host.innerHTML=ptnAutoNews()+'<div class="card"><h2>◎ 夥伴動態（人工策展） <small>'
     +esc((PP.curatedAtLabel||''))+'　共 '+list.length+' 則</small></h2>'
     +(items||'<div class="empty">此篩選條件下無消息</div>')+legend+'</div>';
 }
@@ -1976,9 +2008,10 @@ Promise.all([
   /* 合作夥伴的兩支檔案是後加的，抓不到時只讓該頁籤顯示「無資料」，
      不要讓既有五個頁籤跟著陣亡，所以各自吞掉錯誤回 null */
   fetch('data/partners.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
-  fetch('data/partners_profile.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+  fetch('data/partners_profile.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+  fetch('data/partners_news.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
 ]).then(function(a){
-  Q=a[0];F=a[1];M=a[2];P=a[3];U=a[4];BD=a[5];PT=a[6];PP=a[7];
+  Q=a[0];F=a[1];M=a[2];P=a[3];U=a[4];BD=a[5];PT=a[6];PP=a[7];PN=a[8];
   var s=Q.series;
   QMAP={}; s.forEach(function(r){QMAP[r.date]=r;});
   applyAliases();
