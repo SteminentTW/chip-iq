@@ -1,5 +1,14 @@
 [
   {
+    "version": "v0.7.3",
+    "dateDisplay": "2026/09/30",
+    "title": "夥伴出現與仲恩相關的新消息時自動通知",
+    "changes": [
+      "新增 partner_alert.yml（夥伴消息通知）：工作日台北 08:23～20:23 每 2 小時檢查夥伴消息來源，標題含 Stemchymal、仲恩、Steminent（各語言寫法）、適應症或日本再生醫療監管用語的新消息，自動開 GitHub Issue（標籤 partner-alert）並 @SteminentTW，GitHub 以 Email 與 App 推播通知。",
+      "只開 Issue、不寫資料不 commit，避免 daily.yml 的 06:00 補跑班誤判；同一則只通知一次（id 記在 Issue 內文）；只看近 3 天發布的消息。與每日資料更新互不影響，守門員未更動。"
+    ]
+  },
+  {
     "version": "v0.7.2",
     "dateDisplay": "2026/09/30",
     "title": "夥伴動態補上 9 月兩則直接相關消息；自動消息降噪；修正 IR news 日期錯位",

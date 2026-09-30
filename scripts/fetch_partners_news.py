@@ -269,6 +269,22 @@ def add_translations(items, prev_zh):
             "translated_this_run": done, "untranslated": failed, "error": err}
 
 
+def fetch_source(src):
+    """抓一個來源並解析、套用 exclude。0 則視為失敗（拋例外）。alert_partners_news.py 也用這支。"""
+    html = src.get("parser") == "ir_html"
+    raw = fetch_bytes(src["url"], {"User-Agent": UA,
+                                   "Accept": "text/html" if html else
+                                   "application/rss+xml, application/xml"},
+                      timeout=30)
+    got = (parse_ir_html if html else parse_rss)(raw, src)
+    if src.get("exclude"):
+        got = [i for i in got if not re.search(src["exclude"], i["title"])]
+    if not got:
+        # IR 頁若改成 JS 動態載入，這裡會是 0 則 → 記為失敗並沿用上次，卡片上會顯示
+        raise RuntimeError("解析後 0 則（頁面結構可能已改版）")
+    return got
+
+
 def main():
     dry = "--dry-run" in sys.argv
     prev = load_json(OUT) or {}
@@ -279,17 +295,7 @@ def main():
     fresh, status = [], []
     for src in SOURCES:
         try:
-            html = src.get("parser") == "ir_html"
-            raw = fetch_bytes(src["url"], {"User-Agent": UA,
-                                           "Accept": "text/html" if html else
-                                           "application/rss+xml, application/xml"},
-                              timeout=30)
-            got = (parse_ir_html if html else parse_rss)(raw, src)
-            if src.get("exclude"):
-                got = [i for i in got if not re.search(src["exclude"], i["title"])]
-            if not got:
-                # IR 頁若改成 JS 動態載入，這裡會是 0 則 → 記為失敗並沿用上次，卡片上會顯示
-                raise RuntimeError("解析後 0 則（頁面結構可能已改版）")
+            got = fetch_source(src)
             fresh.extend(got)
             status.append({"id": src["id"], "companyId": src["companyId"], "label": src["label"],
                            "kind": src["kind"], "ok": True, "count": len(got)})

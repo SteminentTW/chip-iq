@@ -1,0 +1,45 @@
+# 海外夥伴出現與仲恩相關的新消息時，自動開 GitHub Issue 通知（Email／GitHub App 推播）。
+#
+# 與 daily.yml 完全獨立：只讀來源、只開 Issue，不寫資料檔、不 commit。
+#   不 commit 很重要：daily.yml 的 06:00 補跑班靠「HEAD 是否為 16 小時內的機器人 commit」
+#   判斷昨晚有沒有更新，這裡若 commit 會讓補跑班誤判而略過。
+# 同一則消息只通知一次：已通知的 id 記在 Issue 內文（見 scripts/alert_partners_news.py）。
+#
+# 排程：工作日台北 08:23～20:23 每 2 小時（UTC 00:23～12:23）。日本適時開示與韓國公告多在白天。
+# GitHub 免費排程常延遲 2～4 小時，所以實際是「當天收到」，不是分鐘級即時。
+# 避開整點與半點，理由同 daily.yml。
+
+name: 夥伴消息通知
+
+on:
+  schedule:
+    - cron: "23 0-12/2 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  TZ: Asia/Taipei
+
+concurrency:
+  group: partner-alert
+  cancel-in-progress: false
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 檢查夥伴新消息並開 Issue
+        working-directory: scripts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python alert_partners_news.py
