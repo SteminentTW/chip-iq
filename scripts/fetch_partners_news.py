@@ -25,9 +25,17 @@
   - 絕不以空資料覆蓋好資料：本次抓到 0 則時沿用舊條目
   - 連結只收 http／https，擋掉 javascript: 之類的 URL（前端會把它當超連結）
 
+中文翻譯（title_zh）：來源標題都是日文／韓文，面板使用者看中文，所以每則標題翻成繁體中文。
+  - 用 Google 翻譯的免憑證端點 translate.googleapis.com（client=gtx）。它和 Yahoo v8 一樣是
+    非官方端點、沒有帳密，符合本站零憑證原則；代價是可能被限流或哪天改掉。
+  - 每則只翻一次：譯文跟著條目存進 JSON，下次沿用，不重打。
+  - 翻譯失敗絕不擋發佈：第一次失敗就停止本次所有翻譯（避免每則都各燒一輪逾時），
+    該則沒有 title_zh，前端顯示原文；下次排程會再補翻。
+  - 機器翻譯可能不精確，前端標示「機器翻譯」並在下方保留原文標題。
+
 用法：python fetch_partners_news.py [--dry-run]
 """
-import hashlib, json, os, re, sys
+import hashlib, json, os, re, sys, time
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -43,6 +51,13 @@ OUT = os.path.join(DATA, "partners_news.json")
 TPE = timezone(timedelta(hours=8))
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "Chrome/126.0 Safari/537.36")
+
+TRANSLATE = ("https://translate.googleapis.com/translate_a/single"
+             "?client=gtx&sl=auto&tl=zh-TW&dt=t&q=")
+MAX_TRANSLATE_PER_RUN = 60
+# 公司名先換成英文再送翻譯：機器翻譯會把「풍전약품」逐字譯成「豐田製藥」這類錯名。
+GLOSSARY = {"풍전약품": "Poongjeon", "SCM생명과학": "SCM Lifescience",
+            "에스씨엠생명과학": "SCM Lifescience", "リプロセル": "REPROCELL"}
 
 # 保留多久、每家最多幾則。畫面上只是「最近發生什麼事」，舊的留在人工策展區。
 KEEP_DAYS = 120
@@ -167,6 +182,46 @@ def parse_rss(raw, src):
     return items
 
 
+def translate(text):
+    """單次呼叫、不走 _http 的重試：翻譯是附加資訊，失敗就等下次排程。"""
+    import urllib.request
+    for k, v in GLOSSARY.items():
+        text = text.replace(k, v)
+    req = urllib.request.Request(TRANSLATE + quote(text), headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        j = json.load(r)
+    zh = "".join(seg[0] for seg in (j[0] or []) if seg and seg[0]).strip()
+    if not zh:
+        raise RuntimeError("翻譯結果為空")
+    return zh
+
+
+def add_translations(items, prev_zh):
+    """補上 title_zh。回傳狀態 dict 給 meta。"""
+    done = failed = 0
+    err = None
+    for i in items:
+        if prev_zh.get(i["id"]):
+            i["title_zh"] = prev_zh[i["id"]]
+            continue
+        if err or done >= MAX_TRANSLATE_PER_RUN:
+            failed += 1
+            continue
+        # 這個端點偶爾回 429／500（限流），隔一下重試一次通常就過；再失敗才熔斷
+        for attempt in (0, 1):
+            try:
+                time.sleep(0.5 if attempt == 0 else 3)
+                i["title_zh"] = translate(i["title"])
+                done += 1
+                break
+            except Exception as e:
+                if attempt:
+                    err = f"{type(e).__name__}: {e}"[:300]
+                    failed += 1
+    return {"engine": "Google 翻譯（translate.googleapis.com，免憑證非官方端點）",
+            "translated_this_run": done, "untranslated": failed, "error": err}
+
+
 def main():
     dry = "--dry-run" in sys.argv
     prev = load_json(OUT) or {}
@@ -218,6 +273,11 @@ def main():
         if per[i["companyId"]] <= MAX_PER_COMPANY:
             kept.append(i)
 
+    prev_zh = {i["id"]: i.get("title_zh") for i in prev_items if i.get("title_zh")}
+    tr = add_translations(kept, prev_zh)
+    print(f"  翻譯：本次新翻 {tr['translated_this_run']} 則、未翻 {tr['untranslated']} 則"
+          + (f"（{tr['error']}）" if tr["error"] else ""))
+
     ok_all = all(s["ok"] for s in status)
     out = {
         "schema_version": 1,
@@ -229,6 +289,7 @@ def main():
                                 else (prev.get("meta") or {}).get("last_success_at")),
             "ok": ok_all,
             "sources": status,
+            "translation": tr,
             "keep_days": KEEP_DAYS,
             "max_per_company": MAX_PER_COMPANY,
             "note": ("自動彙整各來源 RSS 的標題與連結，未經人工覆核、不代表與仲恩相關。"
