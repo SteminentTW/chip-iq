@@ -4,196 +4,6 @@
  "shares_outstanding": 80682241,
  "series": [
   {
-   "date": "2024-10-01",
-   "volume": 63123,
-   "turnover": 1500904,
-   "high": 24.75,
-   "low": 23.35,
-   "avg_price": 23.78,
-   "trades": 42,
-   "market_cap": 19.19
-  },
-  {
-   "date": "2024-10-04",
-   "volume": 43151,
-   "turnover": 1020414,
-   "high": 24.25,
-   "low": 23.15,
-   "avg_price": 23.65,
-   "trades": 27,
-   "market_cap": 19.08
-  },
-  {
-   "date": "2024-10-07",
-   "volume": 14002,
-   "turnover": 330498,
-   "high": 24.6,
-   "low": 23.4,
-   "avg_price": 23.6,
-   "trades": 11,
-   "market_cap": 19.04
-  },
-  {
-   "date": "2024-10-08",
-   "volume": 24004,
-   "turnover": 576797,
-   "high": 24.45,
-   "low": 23.25,
-   "avg_price": 24.03,
-   "trades": 16,
-   "market_cap": 19.39
-  },
-  {
-   "date": "2024-10-09",
-   "volume": 44505,
-   "turnover": 1036644,
-   "high": 24.45,
-   "low": 23.0,
-   "avg_price": 23.29,
-   "trades": 29,
-   "market_cap": 18.79
-  },
-  {
-   "date": "2024-10-11",
-   "volume": 82164,
-   "turnover": 1890364,
-   "high": 23.85,
-   "low": 22.9,
-   "avg_price": 23.01,
-   "trades": 25,
-   "market_cap": 18.56
-  },
-  {
-   "date": "2024-10-14",
-   "volume": 83163,
-   "turnover": 1909452,
-   "high": 23.35,
-   "low": 22.8,
-   "avg_price": 22.96,
-   "trades": 32,
-   "market_cap": 18.52
-  },
-  {
-   "date": "2024-10-15",
-   "volume": 4001,
-   "turnover": 93523,
-   "high": 23.4,
-   "low": 23.35,
-   "avg_price": 23.37,
-   "trades": 3,
-   "market_cap": 18.86
-  },
-  {
-   "date": "2024-10-16",
-   "volume": 7011,
-   "turnover": 163757,
-   "high": 23.4,
-   "low": 23.3,
-   "avg_price": 23.36,
-   "trades": 6,
-   "market_cap": 18.85
-  },
-  {
-   "date": "2024-10-17",
-   "volume": 27363,
-   "turnover": 616594,
-   "high": 23.4,
-   "low": 22.4,
-   "avg_price": 22.53,
-   "trades": 21,
-   "market_cap": 18.18
-  },
-  {
-   "date": "2024-10-18",
-   "volume": 11514,
-   "turnover": 257391,
-   "high": 23.4,
-   "low": 22.3,
-   "avg_price": 22.35,
-   "trades": 9,
-   "market_cap": 18.03
-  },
-  {
-   "date": "2024-10-21",
-   "volume": 44372,
-   "turnover": 988061,
-   "high": 23.35,
-   "low": 22.0,
-   "avg_price": 22.27,
-   "trades": 32,
-   "market_cap": 17.97
-  },
-  {
-   "date": "2024-10-22",
-   "volume": 3012,
-   "turnover": 67824,
-   "high": 22.85,
-   "low": 21.85,
-   "avg_price": 22.52,
-   "trades": 6,
-   "market_cap": 18.17
-  },
-  {
-   "date": "2024-10-23",
-   "volume": 43617,
-   "turnover": 957089,
-   "high": 22.85,
-   "low": 21.6,
-   "avg_price": 21.94,
-   "trades": 41,
-   "market_cap": 17.7
-  },
-  {
-   "date": "2024-10-24",
-   "volume": 20228,
-   "turnover": 440232,
-   "high": 22.65,
-   "low": 21.6,
-   "avg_price": 21.76,
-   "trades": 16,
-   "market_cap": 17.56
-  },
-  {
-   "date": "2024-10-25",
-   "volume": 67900,
-   "turnover": 1540947,
-   "high": 23.15,
-   "low": 21.6,
-   "avg_price": 22.69,
-   "trades": 44,
-   "market_cap": 18.31
-  },
-  {
-   "date": "2024-10-28",
-   "volume": 5020,
-   "turnover": 115761,
-   "high": 23.1,
-   "low": 23.0,
-   "avg_price": 23.06,
-   "trades": 7,
-   "market_cap": 18.61
-  },
-  {
-   "date": "2024-10-29",
-   "volume": 34150,
-   "turnover": 758822,
-   "high": 22.5,
-   "low": 22.0,
-   "avg_price": 22.22,
-   "trades": 30,
-   "market_cap": 17.93
-  },
-  {
-   "date": "2024-10-30",
-   "volume": 30919,
-   "turnover": 679502,
-   "high": 22.5,
-   "low": 21.55,
-   "avg_price": 21.98,
-   "trades": 30,
-   "market_cap": 17.73
-  },
-  {
    "date": "2024-11-01",
    "volume": 15359,
    "turnover": 337406,
@@ -4842,6 +4652,16 @@
    "avg_price": 191.96,
    "trades": 1093,
    "market_cap": 154.88
+  },
+  {
+   "date": "2026-10-01",
+   "volume": 1308368,
+   "turnover": 250990630,
+   "high": 199.5,
+   "low": 188.0,
+   "avg_price": 191.83,
+   "trades": 976,
+   "market_cap": 154.77
   }
  ]
 }
