@@ -1297,7 +1297,7 @@ function renderVwap10(s,last){
     ['近 10 日均價',v!=null?nf(v,2):'—',
       d!=null?'最新日均價 '+nf(last.avg_price,2)+'，<span class="'+cls(d)+'">'+sign(d,2)+'（'+sign(d/v*100,2)+'%）</span>':''],
     ['承銷價下限（10 日均價 × 70%）',floor!=null?nf(floor,2):'—',
-      df!=null?'最新日均價 <span class="'+cls(df)+'">'+(df>=0?'高於':'低於')+'下限 '+sign(df/floor*100,2)+'%</span>':''],
+      df!=null?'最新日均價 '+nf(last.avg_price,2)+'，<span class="'+cls(df)+'">'+(df>=0?'高於':'低於')+'下限 '+sign(df/floor*100,2)+'%</span>':''],
     ['總成交金額',nf(amt/1e8,2)+' 億',nf(amt)+' 元'],
     ['總成交股數',nf(vol),nf(vol/1000)+' 張'],
     ['計算區間',w.length+' 個營業日',range]
