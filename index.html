@@ -199,11 +199,7 @@
   <div class="kpi" id="kpi"></div>
   <div class="card">
     <h2>◎ 近 10 個營業日均價 <small>＝近 10 個營業日總成交金額 ÷ 總成交股數（無成交日不計）</small></h2>
-    <div class="kpi" id="vwap10Kpi" style="margin-bottom:14px"></div>
-    <table>
-      <thead><tr><th>日期</th><th class="num">成交股數</th><th class="num">成交金額（元）</th><th class="num">當日均價</th></tr></thead>
-      <tbody id="vwap10Rows"></tbody>
-    </table>
+    <div class="kpi" id="vwap10Kpi" style="margin-bottom:0"></div>
   </div>
   <div class="card">
     <h2>◎ 近一季均價走勢 <small>成交均價＝當日成交金額 ÷ 成交股數，最能反映整體交易重心</small></h2>
@@ -1288,16 +1284,20 @@ function renderOv(){
 }
 
 /* 近 10 個營業日均價：用總金額 ÷ 總股數（成交量加權），不是 10 個日均價的簡單平均。
-   序列只收有成交的日子，所以「最後 10 筆」就是最近 10 個有成交的營業日。 */
+   序列只收有成交的日子，所以「最後 10 筆」就是最近 10 個有成交的營業日。
+   上市承銷價最低為近 10 個營業日均價的七成，所以一併顯示 70% 作為承銷價下限。 */
 function renderVwap10(s,last){
   var w=s.filter(function(r){return r.volume>0&&r.turnover>0;}).slice(-10);
   var amt=0,vol=0;
   w.forEach(function(r){amt+=r.turnover;vol+=r.volume;});
   var v=vol?amt/vol:null, d=v!=null&&last.avg_price!=null?last.avg_price-v:null;
+  var floor=v!=null?v*0.7:null, df=floor!=null&&last.avg_price!=null?last.avg_price-floor:null;
   var range=w.length?esc(w[0].date)+' ～ '+esc(w[w.length-1].date):'—';
   var boxes=[
     ['近 10 日均價',v!=null?nf(v,2):'—',
       d!=null?'最新日均價 '+nf(last.avg_price,2)+'，<span class="'+cls(d)+'">'+sign(d,2)+'（'+sign(d/v*100,2)+'%）</span>':''],
+    ['承銷價下限（10 日均價 × 70%）',floor!=null?nf(floor,2):'—',
+      df!=null?'最新日均價 <span class="'+cls(df)+'">'+(df>=0?'高於':'低於')+'下限 '+sign(df/floor*100,2)+'%</span>':''],
     ['總成交金額',nf(amt/1e8,2)+' 億',nf(amt)+' 元'],
     ['總成交股數',nf(vol),nf(vol/1000)+' 張'],
     ['計算區間',w.length+' 個營業日',range]
@@ -1305,12 +1305,6 @@ function renderVwap10(s,last){
   document.getElementById('vwap10Kpi').innerHTML=boxes.map(function(b){
     return '<div class="box"><div class="n">'+b[1]+'</div><div class="l">'+b[0]+'</div><div class="d">'+b[2]+'</div></div>';
   }).join('');
-  document.getElementById('vwap10Rows').innerHTML=w.slice().reverse().map(function(r){
-    return '<tr><td>'+esc(r.date)+'</td><td class="num">'+nf(r.volume)+'</td>'
-      +'<td class="num">'+nf(r.turnover)+'</td><td class="num">'+nf(r.avg_price,2)+'</td></tr>';
-  }).join('')
-    +'<tr style="font-weight:700"><td>合計／均價</td><td class="num">'+nf(vol)+'</td>'
-    +'<td class="num">'+nf(amt)+'</td><td class="num">'+(v!=null?nf(v,2):'—')+'</td></tr>';
 }
 
 /* ---------- 載入 ----------
