@@ -1298,17 +1298,13 @@ function renderVwap10(s,last){
   var w30=s.filter(function(r){return r.volume>0&&r.avg_price!=null;}).slice(-30);
   var sa30=w30.length?w30.reduce(function(t,r){return t+r.avg_price;},0)/w30.length:null;
   var cap=sa30!=null?sa30*0.7:null, subCap=cap!=null?cap*1.3:null;
-  var range=w.length?esc(w[0].date)+' ～ '+esc(w[w.length-1].date):'—';
   var boxes=[
     ['近 10 日均價',v!=null?nf(v,2):'—',
       d!=null?'最新日均價 '+nf(last.avg_price,2)+'，<span class="'+cls(d)+'">'+sign(d,2)+'（'+sign(d/v*100,2)+'%）</span>':''],
     ['競拍最低承銷價上限（30 日均價 × 70%）',cap!=null?nf(cap,2):'—',
       cap!=null?w30.length+' 日簡單平均 '+nf(sa30,2)+'，最新日均價 '+nf(last.avg_price,2):''],
     ['公開申購價上限（底價 × 1.3）',subCap!=null?nf(subCap,2):'—',
-      subCap!=null?'得標加權均價，以底價 '+nf(cap,2)+' 的 1.3 倍封頂':''],
-    ['總成交金額',nf(amt/1e8,2)+' 億',nf(amt)+' 元'],
-    ['總成交股數',nf(vol),nf(vol/1000)+' 張'],
-    ['計算區間',w.length+' 個營業日',range]
+      subCap!=null?'得標加權均價，以底價 '+nf(cap,2)+' 的 1.3 倍封頂':'']
   ];
   document.getElementById('vwap10Kpi').innerHTML=boxes.map(function(b){
     return '<div class="box"><div class="n">'+b[1]+'</div><div class="l">'+b[0]+'</div><div class="d">'+b[2]+'</div></div>';
