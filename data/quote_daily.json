@@ -4752,6 +4752,16 @@
    "avg_price": 261.45,
    "trades": 964,
    "market_cap": 210.94
+  },
+  {
+   "date": "2026-11-18",
+   "volume": 2605616,
+   "turnover": 744598240,
+   "high": 301.0,
+   "low": 256.0,
+   "avg_price": 285.77,
+   "trades": 2229,
+   "market_cap": 230.57
   }
  ]
 }
